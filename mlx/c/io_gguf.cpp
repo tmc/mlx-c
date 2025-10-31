@@ -1,225 +1,42 @@
 /* Copyright © 2023-2024 Apple Inc. */
 
 #include "mlx/c/io_gguf.h"
-#include <variant>
 #include "mlx/c/error.h"
 #include "mlx/c/private/array.h"
-#include "mlx/c/private/io_gguf.h"
 #include "mlx/c/private/map.h"
 #include "mlx/c/private/stream.h"
-#include "mlx/c/private/string.h"
-#include "mlx/c/private/vector.h"
 #include "mlx/io.h"
 
-extern "C" mlx_gguf_metadata mlx_gguf_metadata_new_string(const char* value) {
+// Wrapper for GGUFMetaData map
+struct mlx_gguf_metadata_map_cpp_ {
+  std::unordered_map<std::string, mlx::core::GGUFMetaData> map;
+};
+
+// Wrapper for metadata map iterator
+struct mlx_gguf_metadata_map_iterator_cpp_ {
+  std::unordered_map<std::string, mlx::core::GGUFMetaData>::const_iterator current;
+  const std::unordered_map<std::string, mlx::core::GGUFMetaData>* map;
+  // Cache last accessed entry since unordered_map iterators aren't bidirectional
+  std::string last_key;
+  const mlx::core::GGUFMetaData* last_value;
+};
+
+extern "C" mlx_gguf_metadata_map mlx_gguf_metadata_map_new(void) {
   try {
-    return mlx_gguf_metadata_new_(mlx::core::GGUFMetaData(std::string(value)));
+    return mlx_gguf_metadata_map{
+        new mlx_gguf_metadata_map_cpp_{
+            std::unordered_map<std::string, mlx::core::GGUFMetaData>()}};
   } catch (std::exception& e) {
     mlx_error(e.what());
-    return mlx_gguf_metadata({nullptr});
+    return mlx_gguf_metadata_map{nullptr};
   }
 }
 
-extern "C" mlx_gguf_metadata mlx_gguf_metadata_new_array(
-    const mlx_array value) {
+extern "C" int mlx_gguf_metadata_map_free(mlx_gguf_metadata_map map) {
   try {
-    return mlx_gguf_metadata_new_(
-        mlx::core::GGUFMetaData(mlx_array_get_(value)));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_gguf_metadata({nullptr});
-  }
-}
-
-extern "C" mlx_gguf_metadata mlx_gguf_metadata_new_string_vector(
-    const mlx_vector_string value) {
-  try {
-    return mlx_gguf_metadata_new_(
-        mlx::core::GGUFMetaData(mlx_vector_string_get_(value)));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_gguf_metadata({nullptr});
-  }
-}
-
-extern "C" mlx_gguf_metadata_type mlx_gguf_metadata_get_type(
-    const mlx_gguf_metadata metadata) {
-  try {
-    auto& variant = mlx_gguf_metadata_get_(metadata);
-    return static_cast<mlx_gguf_metadata_type>(variant.index());
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return MLX_GGUF_METADATA_NONE;
-  }
-}
-
-extern "C" int mlx_gguf_metadata_get_string(
-    mlx_string* res,
-    const mlx_gguf_metadata metadata) {
-  try {
-    auto& variant = mlx_gguf_metadata_get_(metadata);
-    if (variant.index() != MLX_GGUF_METADATA_STRING) {
-      mlx_error("metadata is not a string");
-      return 1;
+    if (map.ctx) {
+      delete static_cast<mlx_gguf_metadata_map_cpp_*>(map.ctx);
     }
-    mlx_string_set_(*res, std::get<std::string>(variant));
-    return 0;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-}
-
-extern "C" int mlx_gguf_metadata_get_array(
-    mlx_array* res,
-    const mlx_gguf_metadata metadata) {
-  try {
-    auto& variant = mlx_gguf_metadata_get_(metadata);
-    if (variant.index() != MLX_GGUF_METADATA_ARRAY) {
-      mlx_error("metadata is not an array");
-      return 1;
-    }
-    mlx_array_set_(*res, std::get<mlx::core::array>(variant));
-    return 0;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-}
-
-extern "C" int mlx_gguf_metadata_get_string_vector(
-    mlx_vector_string* res,
-    const mlx_gguf_metadata metadata) {
-  try {
-    auto& variant = mlx_gguf_metadata_get_(metadata);
-    if (variant.index() != MLX_GGUF_METADATA_STRING_VECTOR) {
-      mlx_error("metadata is not a string vector");
-      return 1;
-    }
-    mlx_vector_string_set_(*res, std::get<std::vector<std::string>>(variant));
-    return 0;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-}
-
-extern "C" int mlx_gguf_metadata_free(mlx_gguf_metadata metadata) {
-  try {
-    mlx_gguf_metadata_free_(metadata);
-    return 0;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-}
-
-extern "C" mlx_map_string_to_gguf_metadata mlx_map_string_to_gguf_metadata_new(
-    void) {
-  try {
-    return mlx_map_string_to_gguf_metadata_new_(
-        std::unordered_map<std::string, mlx::core::GGUFMetaData>());
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_map_string_to_gguf_metadata({nullptr});
-  }
-}
-
-extern "C" int mlx_map_string_to_gguf_metadata_set(
-    mlx_map_string_to_gguf_metadata* map,
-    const mlx_map_string_to_gguf_metadata src) {
-  try {
-    mlx_map_string_to_gguf_metadata_set_(
-        *map, mlx_map_string_to_gguf_metadata_get_(src));
-    return 0;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-}
-
-extern "C" int mlx_map_string_to_gguf_metadata_insert(
-    mlx_map_string_to_gguf_metadata map,
-    const char* key,
-    const mlx_gguf_metadata value) {
-  try {
-    auto& cpp_map = mlx_map_string_to_gguf_metadata_get_(map);
-    cpp_map[std::string(key)] = mlx_gguf_metadata_get_(value);
-    return 0;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-}
-
-extern "C" int mlx_map_string_to_gguf_metadata_get(
-    mlx_gguf_metadata* res,
-    const mlx_map_string_to_gguf_metadata map,
-    const char* key) {
-  try {
-    auto& cpp_map = mlx_map_string_to_gguf_metadata_get_(map);
-    auto it = cpp_map.find(std::string(key));
-    if (it == cpp_map.end()) {
-      return 2;
-    }
-    *res = mlx_gguf_metadata_new_(it->second);
-    return 0;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-}
-
-extern "C" int mlx_map_string_to_gguf_metadata_free(
-    mlx_map_string_to_gguf_metadata map) {
-  try {
-    mlx_map_string_to_gguf_metadata_free_(map);
-    return 0;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-}
-
-extern "C" mlx_map_string_to_gguf_metadata_iterator
-mlx_map_string_to_gguf_metadata_iterator_new(
-    mlx_map_string_to_gguf_metadata map) {
-  try {
-    auto& cpp_map = mlx_map_string_to_gguf_metadata_get_(map);
-    mlx_map_string_to_gguf_metadata_iterator it;
-    it.map_ctx = map.ctx;
-    mlx_map_string_to_gguf_metadata_iterator_set_(it, cpp_map.begin());
-    return it;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_map_string_to_gguf_metadata_iterator({nullptr, nullptr});
-  }
-}
-
-extern "C" int mlx_map_string_to_gguf_metadata_iterator_free(
-    mlx_map_string_to_gguf_metadata_iterator it) {
-  try {
-    mlx_map_string_to_gguf_metadata_iterator_free_(it);
-    return 0;
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-}
-
-extern "C" int mlx_map_string_to_gguf_metadata_iterator_next(
-    const char** key,
-    mlx_gguf_metadata* value,
-    mlx_map_string_to_gguf_metadata_iterator it) {
-  try {
-    auto& cpp_it = mlx_map_string_to_gguf_metadata_iterator_get_(it);
-    auto& cpp_map = mlx_map_string_to_gguf_metadata_iterator_get_map_(it);
-    if (cpp_it == cpp_map.end()) {
-      return 1;
-    }
-    *key = cpp_it->first.c_str();
-    *value = mlx_gguf_metadata_new_(cpp_it->second);
-    ++cpp_it;
     return 0;
   } catch (std::exception& e) {
     mlx_error(e.what());
@@ -229,14 +46,23 @@ extern "C" int mlx_map_string_to_gguf_metadata_iterator_next(
 
 extern "C" int mlx_load_gguf(
     mlx_map_string_to_array* res_arrays,
-    mlx_map_string_to_gguf_metadata* res_metadata,
+    mlx_gguf_metadata_map* res_metadata,
     const char* file,
     const mlx_stream s) {
   try {
     auto [arrays, metadata] =
         mlx::core::load_gguf(std::string(file), mlx_stream_get_(s));
+
     mlx_map_string_to_array_set_(*res_arrays, std::move(arrays));
-    mlx_map_string_to_gguf_metadata_set_(*res_metadata, std::move(metadata));
+
+    if (res_metadata->ctx) {
+      static_cast<mlx_gguf_metadata_map_cpp_*>(res_metadata->ctx)->map =
+          std::move(metadata);
+    } else {
+      res_metadata->ctx =
+          new mlx_gguf_metadata_map_cpp_{std::move(metadata)};
+    }
+
     return 0;
   } catch (std::exception& e) {
     mlx_error(e.what());
@@ -247,12 +73,207 @@ extern "C" int mlx_load_gguf(
 extern "C" int mlx_save_gguf(
     const char* file,
     const mlx_map_string_to_array arrays,
-    const mlx_map_string_to_gguf_metadata metadata) {
+    const mlx_gguf_metadata_map metadata) {
   try {
+    std::unordered_map<std::string, mlx::core::GGUFMetaData> meta_map;
+    if (metadata.ctx) {
+      meta_map = static_cast<mlx_gguf_metadata_map_cpp_*>(metadata.ctx)->map;
+    }
+
     mlx::core::save_gguf(
-        std::string(file),
-        mlx_map_string_to_array_get_(arrays),
-        mlx_map_string_to_gguf_metadata_get_(metadata));
+        std::string(file), mlx_map_string_to_array_get_(arrays), meta_map);
+
+    return 0;
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+}
+
+extern "C" size_t mlx_gguf_metadata_map_size(
+    const mlx_gguf_metadata_map map) {
+  if (!map.ctx) {
+    return 0;
+  }
+  return static_cast<mlx_gguf_metadata_map_cpp_*>(map.ctx)->map.size();
+}
+
+extern "C" mlx_gguf_metadata_map_iterator
+mlx_gguf_metadata_map_iterator_new(const mlx_gguf_metadata_map map) {
+  try {
+    if (!map.ctx) {
+      return mlx_gguf_metadata_map_iterator{nullptr};
+    }
+
+    auto* map_cpp = static_cast<mlx_gguf_metadata_map_cpp_*>(map.ctx);
+    auto* it_cpp = new mlx_gguf_metadata_map_iterator_cpp_{
+        map_cpp->map.begin(), &map_cpp->map, "", nullptr};
+
+    return mlx_gguf_metadata_map_iterator{it_cpp};
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return mlx_gguf_metadata_map_iterator{nullptr};
+  }
+}
+
+extern "C" int mlx_gguf_metadata_map_iterator_free(
+    mlx_gguf_metadata_map_iterator it) {
+  try {
+    if (it.ctx) {
+      delete static_cast<mlx_gguf_metadata_map_iterator_cpp_*>(it.ctx);
+    }
+    return 0;
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+}
+
+extern "C" int mlx_gguf_metadata_map_iterator_next(
+    const char** res_key,
+    mlx_gguf_value_type* res_type,
+    mlx_gguf_metadata_map_iterator it) {
+  try {
+    if (!it.ctx) {
+      return 1;
+    }
+
+    auto* it_cpp = static_cast<mlx_gguf_metadata_map_iterator_cpp_*>(it.ctx);
+
+    if (it_cpp->current == it_cpp->map->end()) {
+      return 2; // No more items (match existing pattern)
+    }
+
+    // Cache key and value pointer for later retrieval
+    it_cpp->last_key = it_cpp->current->first;
+    it_cpp->last_value = &it_cpp->current->second;
+
+    // Return key from cached string
+    *res_key = it_cpp->last_key.c_str();
+
+    // Determine the variant type
+    const auto& value = *it_cpp->last_value;
+    if (std::holds_alternative<std::monostate>(value)) {
+      *res_type = MLX_GGUF_VALUE_TYPE_NONE;
+    } else if (std::holds_alternative<mlx::core::array>(value)) {
+      *res_type = MLX_GGUF_VALUE_TYPE_ARRAY;
+    } else if (std::holds_alternative<std::string>(value)) {
+      *res_type = MLX_GGUF_VALUE_TYPE_STRING;
+    } else if (std::holds_alternative<std::vector<std::string>>(value)) {
+      *res_type = MLX_GGUF_VALUE_TYPE_STRING_ARRAY;
+    }
+
+    ++it_cpp->current;
+    return 0;
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+}
+
+extern "C" int mlx_gguf_metadata_get_string(
+    const char** res_value,
+    mlx_gguf_metadata_map_iterator it) {
+  try {
+    if (!it.ctx) {
+      return 1;
+    }
+
+    auto* it_cpp = static_cast<mlx_gguf_metadata_map_iterator_cpp_*>(it.ctx);
+
+    if (!it_cpp->last_value) {
+      return 1; // Iterator not yet advanced
+    }
+
+    if (!std::holds_alternative<std::string>(*it_cpp->last_value)) {
+      return 1; // Wrong type
+    }
+
+    *res_value = std::get<std::string>(*it_cpp->last_value).c_str();
+    return 0;
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+}
+
+extern "C" int mlx_gguf_metadata_get_array(
+    mlx_array* res_value,
+    mlx_gguf_metadata_map_iterator it) {
+  try {
+    if (!it.ctx) {
+      return 1;
+    }
+
+    auto* it_cpp = static_cast<mlx_gguf_metadata_map_iterator_cpp_*>(it.ctx);
+
+    if (!it_cpp->last_value) {
+      return 1; // Iterator not yet advanced
+    }
+
+    if (!std::holds_alternative<mlx::core::array>(*it_cpp->last_value)) {
+      return 1; // Wrong type
+    }
+
+    mlx_array_set_(*res_value, std::get<mlx::core::array>(*it_cpp->last_value));
+    return 0;
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+}
+
+extern "C" int mlx_gguf_metadata_get_string_array_size(
+    size_t* res_size,
+    mlx_gguf_metadata_map_iterator it) {
+  try {
+    if (!it.ctx) {
+      return 1;
+    }
+
+    auto* it_cpp = static_cast<mlx_gguf_metadata_map_iterator_cpp_*>(it.ctx);
+
+    if (!it_cpp->last_value) {
+      return 1; // Iterator not yet advanced
+    }
+
+    if (!std::holds_alternative<std::vector<std::string>>(*it_cpp->last_value)) {
+      return 1; // Wrong type
+    }
+
+    *res_size = std::get<std::vector<std::string>>(*it_cpp->last_value).size();
+    return 0;
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+}
+
+extern "C" int mlx_gguf_metadata_get_string_array_at(
+    const char** res_value,
+    size_t index,
+    mlx_gguf_metadata_map_iterator it) {
+  try {
+    if (!it.ctx) {
+      return 1;
+    }
+
+    auto* it_cpp = static_cast<mlx_gguf_metadata_map_iterator_cpp_*>(it.ctx);
+
+    if (!it_cpp->last_value) {
+      return 1; // Iterator not yet advanced
+    }
+
+    if (!std::holds_alternative<std::vector<std::string>>(*it_cpp->last_value)) {
+      return 1; // Wrong type
+    }
+
+    const auto& vec = std::get<std::vector<std::string>>(*it_cpp->last_value);
+    if (index >= vec.size()) {
+      return 1; // Out of bounds
+    }
+
+    *res_value = vec[index].c_str();
     return 0;
   } catch (std::exception& e) {
     mlx_error(e.what());
