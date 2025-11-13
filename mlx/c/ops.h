@@ -361,7 +361,7 @@ int mlx_dequantize(
     int group_size,
     int bits,
     const char* mode,
-    int dtype /* -1 for nullopt */,
+    mlx_optional_int dtype,
     const mlx_stream s);
 int mlx_diag(mlx_array* res, const mlx_array a, int k, const mlx_stream s);
 int mlx_diagonal(
