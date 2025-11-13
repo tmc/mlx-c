@@ -1062,7 +1062,7 @@ extern "C" int mlx_dequantize(
     int group_size,
     int bits,
     const char* mode,
-    mlx_optional_int dtype,
+    const mlx_dtype* dtype /* may be null */,
     const mlx_stream s) {
   try {
     mlx_array_set_(
@@ -1075,9 +1075,8 @@ extern "C" int mlx_dequantize(
             group_size,
             bits,
             std::string(mode),
-            (dtype.has_value
-                 ? std::make_optional(mlx_dtype_to_cpp((mlx_dtype)dtype.value))
-                 : std::nullopt),
+            (dtype ? std::make_optional(mlx_dtype_to_cpp(*dtype))
+                   : std::nullopt),
             mlx_stream_get_(s)));
   } catch (std::exception& e) {
     mlx_error(e.what());
