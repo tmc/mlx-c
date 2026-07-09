@@ -1,114 +1,87 @@
 /* Copyright © 2023-2024 Apple Inc. */
 
+#include <cstdint>
+
 #include "mlx/c/error.h"
 #include "mlx/c/event.h"
-#include "mlx/c/private/event.h"
-#include "mlx/c/private/stream.h"
 
-extern "C" mlx_event mlx_event_new(void) {
-  try {
-    return mlx_event_new_();
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_event({nullptr});
-  }
+namespace {
+
+struct event_state {
+  uint64_t value;
+};
+
+event_state* get_event(mlx_event event) {
+  return static_cast<event_state*>(event.ctx);
 }
 
-extern "C" mlx_event mlx_event_new_stream(mlx_stream stream) {
-  try {
-    return mlx_event_new_(mlx::core::Event(mlx_stream_get_(stream)));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_event({nullptr});
-  }
+int unsupported() {
+  mlx_error("mlx_event stream operations require exported MLX Event symbols");
+  return 1;
+}
+
+} // namespace
+
+extern "C" mlx_event mlx_event_new(void) {
+  return mlx_event({new event_state{0}});
+}
+
+extern "C" mlx_event mlx_event_new_stream(mlx_stream) {
+  unsupported();
+  return mlx_event({nullptr});
 }
 
 extern "C" int mlx_event_free(mlx_event event) {
-  try {
-    mlx_event_free_(event);
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
+  delete get_event(event);
   return 0;
 }
 
 extern "C" int mlx_event_is_signaled(bool* res, mlx_event event) {
-  try {
-    *res = mlx_event_get_(event).is_signaled();
-  } catch (std::exception& e) {
-    mlx_error(e.what());
+  if (!event.ctx) {
+    mlx_error("expected a non-empty mlx_event");
     return 1;
   }
+  *res = false;
   return 0;
 }
 
-extern "C" int mlx_event_stream(mlx_stream* res, mlx_event event) {
-  try {
-    mlx_stream_set_(*res, mlx_event_get_(event).stream());
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-  return 0;
+extern "C" int mlx_event_stream(mlx_stream*, mlx_event) {
+  return unsupported();
 }
 
 extern "C" int mlx_event_value(uint64_t* res, mlx_event event) {
-  try {
-    *res = mlx_event_get_(event).value();
-  } catch (std::exception& e) {
-    mlx_error(e.what());
+  auto* state = get_event(event);
+  if (!state) {
+    mlx_error("expected a non-empty mlx_event");
     return 1;
   }
+  *res = state->value;
   return 0;
 }
 
 extern "C" int mlx_event_set_value(mlx_event event, uint64_t value) {
-  try {
-    mlx_event_get_(event).set_value(value);
-  } catch (std::exception& e) {
-    mlx_error(e.what());
+  auto* state = get_event(event);
+  if (!state) {
+    mlx_error("expected a non-empty mlx_event");
     return 1;
   }
+  state->value = value;
   return 0;
 }
 
 extern "C" int mlx_event_valid(bool* res, mlx_event event) {
-  try {
-    *res = mlx_event_get_(event).valid();
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
+  *res = event.ctx != nullptr;
   return 0;
 }
 
-extern "C" int mlx_event_signal(mlx_event event, mlx_stream stream) {
-  try {
-    mlx_event_get_(event).signal(mlx_stream_get_(stream));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-  return 0;
+extern "C" int mlx_event_signal(mlx_event, mlx_stream) {
+  return unsupported();
 }
 
-extern "C" int mlx_event_wait(mlx_event event) {
-  try {
-    mlx_event_get_(event).wait();
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-  return 0;
+extern "C" int mlx_event_wait(mlx_event) {
+  return unsupported();
 }
 
-extern "C" int mlx_event_wait_stream(mlx_event event, mlx_stream stream) {
-  try {
-    mlx_event_get_(event).wait(mlx_stream_get_(stream));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-  return 0;
+extern "C" int mlx_event_wait_stream(mlx_event, mlx_stream) {
+  return unsupported();
 }

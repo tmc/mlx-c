@@ -2,62 +2,48 @@
 
 #include "mlx/c/error.h"
 #include "mlx/c/fence.h"
-#include "mlx/c/private/array.h"
-#include "mlx/c/private/fence.h"
-#include "mlx/c/private/stream.h"
 
-extern "C" mlx_fence mlx_fence_new(void) {
-  try {
-    return mlx_fence_new_();
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_fence({nullptr});
-  }
+namespace {
+
+struct fence_state {};
+
+fence_state* get_fence(mlx_fence fence) {
+  return static_cast<fence_state*>(fence.ctx);
 }
 
-extern "C" mlx_fence mlx_fence_new_stream(mlx_stream stream) {
-  try {
-    return mlx_fence_new_(mlx::core::Fence(mlx_stream_get_(stream)));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_fence({nullptr});
-  }
+int unsupported() {
+  mlx_error("mlx_fence operations require exported MLX Fence symbols");
+  return 1;
+}
+
+} // namespace
+
+extern "C" mlx_fence mlx_fence_new(void) {
+  return mlx_fence({new fence_state{}});
+}
+
+extern "C" mlx_fence mlx_fence_new_stream(mlx_stream) {
+  unsupported();
+  return mlx_fence({nullptr});
 }
 
 extern "C" int mlx_fence_free(mlx_fence fence) {
-  try {
-    mlx_fence_free_(fence);
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
+  delete get_fence(fence);
   return 0;
 }
 
-extern "C" int mlx_fence_update(
-    mlx_fence fence,
-    mlx_stream stream,
-    const mlx_array x,
-    bool cross_device) {
-  try {
-    mlx_fence_get_(fence).update(
-        mlx_stream_get_(stream), mlx_array_get_(x), cross_device);
-  } catch (std::exception& e) {
-    mlx_error(e.what());
+extern "C" int mlx_fence_update(mlx_fence fence, mlx_stream, const mlx_array, bool) {
+  if (!fence.ctx) {
+    mlx_error("expected a non-empty mlx_fence");
     return 1;
   }
-  return 0;
+  return unsupported();
 }
 
-extern "C" int mlx_fence_wait(
-    mlx_fence fence,
-    mlx_stream stream,
-    const mlx_array x) {
-  try {
-    mlx_fence_get_(fence).wait(mlx_stream_get_(stream), mlx_array_get_(x));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
+extern "C" int mlx_fence_wait(mlx_fence fence, mlx_stream, const mlx_array) {
+  if (!fence.ctx) {
+    mlx_error("expected a non-empty mlx_fence");
     return 1;
   }
-  return 0;
+  return unsupported();
 }
