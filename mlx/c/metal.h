@@ -29,9 +29,19 @@ extern "C" {
 /**@{*/
 
 /**
+ * Return the custom Metal library path.
+ */
+int mlx_metal_get_metallib_path(mlx_string* res);
+
+/**
  * Return true when Metal is available.
  */
 int mlx_metal_is_available(bool* res);
+
+/**
+ * Set the custom Metal library path.
+ */
+int mlx_metal_set_metallib_path(const char* path);
 
 /**
  * Capture a GPU trace, saving it to an absolute file `path`

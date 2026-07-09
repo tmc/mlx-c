@@ -284,6 +284,16 @@ int mlx_as_strided(
 /**
  * Convert an array to the given data type.
  */
+int mlx_astype_copy(
+    mlx_array* res,
+    const mlx_array a,
+    mlx_dtype dtype,
+    mlx_optional_bool copy,
+    const mlx_stream s);
+
+/**
+ * Cast an array to a dtype, using MLX's default copy behavior.
+ */
 int mlx_astype(
     mlx_array* res,
     const mlx_array a,
@@ -563,6 +573,36 @@ int mlx_cos(mlx_array* res, const mlx_array a, const mlx_stream s);
 int mlx_cosh(mlx_array* res, const mlx_array a, const mlx_stream s);
 
 /**
+ * Count nonzero elements over multiple axes.
+ */
+int mlx_count_nonzero_axes(
+    mlx_array* res,
+    const mlx_array a,
+    const int* axes,
+    size_t axes_num,
+    bool keepdims,
+    const mlx_stream s);
+
+/**
+ * Count nonzero elements over one axis.
+ */
+int mlx_count_nonzero_axis(
+    mlx_array* res,
+    const mlx_array a,
+    int axis,
+    bool keepdims,
+    const mlx_stream s);
+
+/**
+ * Count the number of non-zero elements in an array.
+ */
+int mlx_count_nonzero(
+    mlx_array* res,
+    const mlx_array a,
+    bool keepdims,
+    const mlx_stream s);
+
+/**
  * Cumulative max of an array along the given axis.
  */
 int mlx_cummax(
@@ -587,6 +627,18 @@ int mlx_cummin(
 /**
  * Cumulative product of an array along the given axis.
  */
+int mlx_cumprod_dtype(
+    mlx_array* res,
+    const mlx_array a,
+    int axis,
+    bool reverse,
+    bool inclusive,
+    mlx_optional_dtype dtype,
+    const mlx_stream s);
+
+/**
+ * Return the cumulative product along an axis.
+ */
 int mlx_cumprod(
     mlx_array* res,
     const mlx_array a,
@@ -597,6 +649,18 @@ int mlx_cumprod(
 
 /**
  * Cumulative sum of an array along the given axis.
+ */
+int mlx_cumsum_dtype(
+    mlx_array* res,
+    const mlx_array a,
+    int axis,
+    bool reverse,
+    bool inclusive,
+    mlx_optional_dtype dtype,
+    const mlx_stream s);
+
+/**
+ * Return the cumulative sum along an axis.
  */
 int mlx_cumsum(
     mlx_array* res,
@@ -650,6 +714,16 @@ int mlx_diagonal(
     int offset,
     int axis1,
     int axis2,
+    const mlx_stream s);
+
+/**
+ * Return the n-th discrete difference along an axis.
+ */
+int mlx_diff(
+    mlx_array* res,
+    const mlx_array a,
+    int n,
+    int axis,
     const mlx_stream s);
 
 /**
@@ -748,6 +822,30 @@ int mlx_flatten(
     int start_axis,
     int end_axis,
     const mlx_stream s);
+
+/**
+ * Reverse the order of the elements along the given axes.
+ */
+int mlx_flip_axes(
+    mlx_array* res,
+    const mlx_array a,
+    const int* axes,
+    size_t axes_num,
+    const mlx_stream s);
+
+/**
+ * Reverse the order of the elements along the given axis.
+ */
+int mlx_flip_axis(
+    mlx_array* res,
+    const mlx_array a,
+    int axis,
+    const mlx_stream s);
+
+/**
+ * Reverse the order of the elements along all axes.
+ */
+int mlx_flip(mlx_array* res, const mlx_array a, const mlx_stream s);
 
 /**
  * Floor the element of an array.
@@ -1052,6 +1150,15 @@ int mlx_logical_not(mlx_array* res, const mlx_array a, const mlx_stream s);
  * Logical or of two arrays
  */
 int mlx_logical_or(
+    mlx_array* res,
+    const mlx_array a,
+    const mlx_array b,
+    const mlx_stream s);
+
+/**
+ * Logical exclusive or of two arrays
+ */
+int mlx_logical_xor(
     mlx_array* res,
     const mlx_array a,
     const mlx_array b,
@@ -1363,6 +1470,11 @@ int mlx_partition(
     const mlx_array a,
     int kth,
     const mlx_stream s);
+
+/**
+ * Unary plus — return a copy of the array unchanged.
+ */
+int mlx_positive(mlx_array* res, const mlx_array a, const mlx_stream s);
 
 /**
  * Raise elements of a to the power of b element-wise
@@ -2223,6 +2335,11 @@ int mlx_tril(mlx_array* res, const mlx_array x, int k, const mlx_stream s);
 int mlx_triu(mlx_array* res, const mlx_array x, int k, const mlx_stream s);
 
 /**
+ * Truncate the elements of an array towards zero.
+ */
+int mlx_trunc(mlx_array* res, const mlx_array a, const mlx_stream s);
+
+/**
  * Unflatten the axis to the given shape.
  */
 int mlx_unflatten(
@@ -2232,6 +2349,20 @@ int mlx_unflatten(
     const int* shape,
     size_t shape_num,
     const mlx_stream s);
+
+/**
+ * Split an array into a sequence of arrays along an axis, removing it.
+ */
+int mlx_unstack_axis(
+    mlx_vector_array* res,
+    const mlx_array a,
+    int axis,
+    const mlx_stream s);
+
+/**
+ * Unstack an array along the default axis.
+ */
+int mlx_unstack(mlx_vector_array* res, const mlx_array a, const mlx_stream s);
 
 /**
  * Computes the variance of the elements of an array along the given
@@ -2266,6 +2397,16 @@ int mlx_var(
     const mlx_array a,
     bool keepdims,
     int ddof,
+    const mlx_stream s);
+
+/**
+ * Compute a vector dot product along an axis.
+ */
+int mlx_vecdot(
+    mlx_array* res,
+    const mlx_array a,
+    const mlx_array b,
+    int axis,
     const mlx_stream s);
 
 /**

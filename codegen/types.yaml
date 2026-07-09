@@ -160,6 +160,12 @@ types:
     ownership: value
     nullability: nullable
     conversion: optional_primitive
+  - cpp: "std::optional<bool>"
+    c: mlx_optional_bool
+    class: optional_primitive
+    ownership: value
+    nullability: nullable
+    conversion: optional_primitive
   - cpp: "std::optional<int>"
     c: mlx_optional_int
     class: optional_primitive

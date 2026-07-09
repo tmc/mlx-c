@@ -19,6 +19,14 @@ extern "C" {
 /**@{*/
 
 /**
+ * A bool optional.
+ */
+typedef struct mlx_optional_bool_ {
+  bool value;
+  bool has_value;
+} mlx_optional_bool;
+
+/**
  * A int optional.
  */
 typedef struct mlx_optional_int_ {

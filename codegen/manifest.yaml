@@ -1,7 +1,7 @@
 schema_version: 1
 
 mlx:
-  expected_git_ref: v0.31.2
+  expected_git_ref: v0.32.0
 
 report:
   require_clean_generated: true
@@ -215,8 +215,11 @@ variant_mappings:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
     astype:
+      - signature: "array(array, Dtype, std::optional<bool>, StreamOrDevice)"
+        suffix: "copy"
       - signature: "array(array, Dtype, StreamOrDevice)"
         suffix: ""
+        doc: Cast an array to a dtype, using MLX's default copy behavior.
     array_equal:
       - signature: "array(array, array, bool, StreamOrDevice)"
         suffix: ""
@@ -337,6 +340,15 @@ variant_mappings:
       - signature: "array(array, bool, StreamOrDevice)"
         suffix: ""
         doc: Return a contiguous array, optionally allowing column-major layout.
+    count_nonzero:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+        doc: Count nonzero elements over multiple axes.
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+        doc: Count nonzero elements over one axis.
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
     copy:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
@@ -359,14 +371,26 @@ variant_mappings:
         skip: true
         reason: not_c_api
     cumprod:
+      - signature: "array(array, int, bool, bool, std::optional<Dtype>, StreamOrDevice)"
+        suffix: "dtype"
       - signature: "array(array, int, bool, bool, StreamOrDevice)"
         suffix: ""
+        doc: Return the cumulative product along an axis.
+      - signature: "array(array, bool, bool, std::optional<Dtype>, StreamOrDevice)"
+        skip: true
+        reason: not_c_api
       - signature: "array(array, bool, bool, StreamOrDevice)"
         skip: true
         reason: not_c_api
     cumsum:
+      - signature: "array(array, int, bool, bool, std::optional<Dtype>, StreamOrDevice)"
+        suffix: "dtype"
       - signature: "array(array, int, bool, bool, StreamOrDevice)"
         suffix: ""
+        doc: Return the cumulative sum along an axis.
+      - signature: "array(array, bool, bool, std::optional<Dtype>, StreamOrDevice)"
+        skip: true
+        reason: not_c_api
       - signature: "array(array, bool, bool, StreamOrDevice)"
         skip: true
         reason: not_c_api
@@ -391,6 +415,10 @@ variant_mappings:
     diagonal:
       - signature: "array(array, int, int, int, StreamOrDevice)"
         suffix: ""
+    diff:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        suffix: ""
+        doc: Return the n-th discrete difference along an axis.
     disable_compile:
       - signature: "void()"
         suffix: ""
@@ -472,6 +500,13 @@ variant_mappings:
       - signature: "array(array, StreamOrDevice)"
         skip: true
         reason: covered_by_other_variant
+    flip:
+      - signature: "array(array, std::vector<int>, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
     floor:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
@@ -648,6 +683,9 @@ variant_mappings:
     logical_or:
       - signature: "array(array, array, StreamOrDevice)"
         suffix: ""
+    logical_xor:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
     logsumexp:
       - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
         suffix: "axes"
@@ -766,6 +804,9 @@ variant_mappings:
         suffix: ""
     power:
       - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    positive:
+      - signature: "array(array, StreamOrDevice)"
         suffix: ""
     put_along_axis:
       - signature: "array(array, array, array, int, StreamOrDevice)"
@@ -1109,6 +1150,9 @@ variant_mappings:
         reason: unsupported_type
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
+    trunc:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
     tri:
       - signature: "array(int, int, int, Dtype, StreamOrDevice)"
         suffix: ""
@@ -1127,6 +1171,12 @@ variant_mappings:
     unflatten:
       - signature: "array(array, int, Shape, StreamOrDevice)"
         suffix: ""
+    unstack:
+      - signature: "std::vector<array>(array, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "std::vector<array>(array, StreamOrDevice)"
+        suffix: ""
+        doc: Unstack an array along the default axis.
     value_and_grad:
       - signature: "ValueAndGradFn(std::function<std::vector<array>(const std::vector<array>&)>, std::vector<int>)"
         suffix: ""
@@ -1172,6 +1222,10 @@ variant_mappings:
       - signature: "array(array, Dtype, StreamOrDevice)"
         suffix: ""
         doc: Return a view of the array with the given data type.
+    vecdot:
+      - signature: "array(array, array, int, StreamOrDevice)"
+        suffix: ""
+        doc: Compute a vector dot product along an axis.
     where:
       - signature: "array(array, array, array, StreamOrDevice)"
         suffix: ""
@@ -1237,7 +1291,7 @@ variant_mappings:
         suffix: ""
         doc: Apply layer normalization with optional weight and bias.
     metal_kernel:
-      - signature: "CustomKernelFunction(std::string, std::vector<std::string>, std::vector<std::string>, std::string, std::string, bool, bool)"
+      - signature: "CustomKernelFunction(std::string, std::vector<std::string>, std::vector<std::string>, std::string, std::string, bool, bool, CompileOptions)"
         suffix: ""
         doc: Create a custom Metal kernel function.
     precompiled_cuda_kernel:
@@ -1463,6 +1517,14 @@ variant_mappings:
       - signature: "bool()"
         suffix: ""
         doc: Return true when Metal is available.
+    get_metallib_path:
+      - signature: "std::string()"
+        suffix: ""
+        doc: Return the custom Metal library path.
+    set_metallib_path:
+      - signature: "void(std::string)"
+        suffix: ""
+        doc: Set the custom Metal library path.
     start_capture:
       - signature: "void(std::string)"
         suffix: ""

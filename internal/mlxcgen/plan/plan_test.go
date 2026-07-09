@@ -18,7 +18,7 @@ func TestDefaultManifestPreservesPlan(t *testing.T) {
 	if manifest.SchemaVersion != SchemaVersion {
 		t.Fatalf("schema version = %d, want %d", manifest.SchemaVersion, SchemaVersion)
 	}
-	if manifest.MLX.ExpectedGitRef != "v0.31.2" {
+	if manifest.MLX.ExpectedGitRef != "v0.32.0" {
 		t.Fatalf("MLX expected git ref = %q", manifest.MLX.ExpectedGitRef)
 	}
 	if !manifest.Report.RequireCleanGenerated ||

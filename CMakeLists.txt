@@ -71,7 +71,7 @@ if(MLX_C_USE_SYSTEM_MLX)
 else()
   set(MLX_C_FETCH_MLX_ARGS
       GIT_REPOSITORY "https://github.com/ml-explore/mlx.git"
-      GIT_TAG v0.31.2)
+      GIT_TAG v0.32.0)
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
     list(APPEND MLX_C_FETCH_MLX_ARGS EXCLUDE_FROM_ALL)
     FetchContent_Declare(

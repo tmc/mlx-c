@@ -275,12 +275,12 @@ func (r *Registry) registerAll() {
 		CArgUntyped: func(s string) string { return s },
 		CReturnArg: func(s string) string {
 			if s == "" {
-				return "char**"
+				return "mlx_string*"
 			}
-			return "char** " + s
+			return "mlx_string* " + s
 		},
 		CAssignFromCpp: func(dest, src string, returned bool) string {
-			return dest + " = " + src + ".c_str()"
+			return "mlx_string_set_(*" + dest + ", " + src + ")"
 		},
 	})
 
@@ -348,7 +348,7 @@ func (r *Registry) registerAll() {
 	}
 
 	// Optional primitive types
-	for _, cppType := range []string{"float", "int", "mlx::core::Dtype"} {
+	for _, cppType := range []string{"bool", "float", "int", "mlx::core::Dtype"} {
 		r.registerOptionalPrimitiveType(cppType)
 	}
 

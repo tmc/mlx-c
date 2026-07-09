@@ -783,6 +783,21 @@
           ]
         },
         {
+          "name": "mlx_optional_bool",
+          "header": "mlx/c/optional.h",
+          "opaque": false,
+          "fields": [
+            {
+              "name": "value",
+              "declaration": "bool value"
+            },
+            {
+              "name": "has_value",
+              "declaration": "bool has_value"
+            }
+          ]
+        },
+        {
           "name": "mlx_optional_dtype",
           "header": "mlx/c/optional.h",
           "opaque": false,
@@ -4050,6 +4065,15 @@
           "signature": "int mlx_set_wired_limit(size_t* res, size_t limit)"
         },
         {
+          "name": "mlx_metal_get_metallib_path",
+          "header": "mlx/c/metal.h",
+          "return": "int",
+          "parameters": [
+            "mlx_string* res"
+          ],
+          "signature": "int mlx_metal_get_metallib_path(mlx_string* res)"
+        },
+        {
           "name": "mlx_metal_is_available",
           "header": "mlx/c/metal.h",
           "return": "int",
@@ -4057,6 +4081,15 @@
             "bool* res"
           ],
           "signature": "int mlx_metal_is_available(bool* res)"
+        },
+        {
+          "name": "mlx_metal_set_metallib_path",
+          "header": "mlx/c/metal.h",
+          "return": "int",
+          "parameters": [
+            "const char* path"
+          ],
+          "signature": "int mlx_metal_set_metallib_path(const char* path)"
         },
         {
           "name": "mlx_metal_start_capture",
@@ -4435,6 +4468,19 @@
             "const mlx_stream s"
           ],
           "signature": "int mlx_astype(mlx_array* res, const mlx_array a, mlx_dtype dtype, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_astype_copy",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "mlx_dtype dtype",
+            "mlx_optional_bool copy",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_astype_copy(mlx_array* res, const mlx_array a, mlx_dtype dtype, mlx_optional_bool copy, const mlx_stream s)"
         },
         {
           "name": "mlx_atleast_1d",
@@ -4826,6 +4872,45 @@
           "signature": "int mlx_cosh(mlx_array* res, const mlx_array a, const mlx_stream s)"
         },
         {
+          "name": "mlx_count_nonzero",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "bool keepdims",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_count_nonzero(mlx_array* res, const mlx_array a, bool keepdims, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_count_nonzero_axes",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "const int* axes",
+            "size_t axes_num",
+            "bool keepdims",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_count_nonzero_axes(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, bool keepdims, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_count_nonzero_axis",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "int axis",
+            "bool keepdims",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_count_nonzero_axis(mlx_array* res, const mlx_array a, int axis, bool keepdims, const mlx_stream s)"
+        },
+        {
           "name": "mlx_cummax",
           "header": "mlx/c/ops.h",
           "return": "int",
@@ -4868,6 +4953,21 @@
           "signature": "int mlx_cumprod(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)"
         },
         {
+          "name": "mlx_cumprod_dtype",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "int axis",
+            "bool reverse",
+            "bool inclusive",
+            "mlx_optional_dtype dtype",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_cumprod_dtype(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)"
+        },
+        {
           "name": "mlx_cumsum",
           "header": "mlx/c/ops.h",
           "return": "int",
@@ -4880,6 +4980,21 @@
             "const mlx_stream s"
           ],
           "signature": "int mlx_cumsum(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_cumsum_dtype",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "int axis",
+            "bool reverse",
+            "bool inclusive",
+            "mlx_optional_dtype dtype",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_cumsum_dtype(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)"
         },
         {
           "name": "mlx_degrees",
@@ -4946,6 +5061,19 @@
             "const mlx_stream s"
           ],
           "signature": "int mlx_diagonal(mlx_array* res, const mlx_array a, int offset, int axis1, int axis2, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_diff",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "int n",
+            "int axis",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_diff(mlx_array* res, const mlx_array a, int n, int axis, const mlx_stream s)"
         },
         {
           "name": "mlx_divide",
@@ -5090,6 +5218,42 @@
             "const mlx_stream s"
           ],
           "signature": "int mlx_flatten(mlx_array* res, const mlx_array a, int start_axis, int end_axis, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_flip",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_flip(mlx_array* res, const mlx_array a, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_flip_axes",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "const int* axes",
+            "size_t axes_num",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_flip_axes(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_flip_axis",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "int axis",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_flip_axis(mlx_array* res, const mlx_array a, int axis, const mlx_stream s)"
         },
         {
           "name": "mlx_floor",
@@ -5551,6 +5715,18 @@
           "signature": "int mlx_logical_or(mlx_array* res, const mlx_array a, const mlx_array b, const mlx_stream s)"
         },
         {
+          "name": "mlx_logical_xor",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "const mlx_array b",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_logical_xor(mlx_array* res, const mlx_array a, const mlx_array b, const mlx_stream s)"
+        },
+        {
           "name": "mlx_logsumexp",
           "header": "mlx/c/ops.h",
           "return": "int",
@@ -5952,6 +6128,17 @@
             "const mlx_stream s"
           ],
           "signature": "int mlx_partition_axis(mlx_array* res, const mlx_array a, int kth, int axis, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_positive",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_positive(mlx_array* res, const mlx_array a, const mlx_stream s)"
         },
         {
           "name": "mlx_power",
@@ -7086,6 +7273,17 @@
           "signature": "int mlx_triu(mlx_array* res, const mlx_array x, int k, const mlx_stream s)"
         },
         {
+          "name": "mlx_trunc",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_trunc(mlx_array* res, const mlx_array a, const mlx_stream s)"
+        },
+        {
           "name": "mlx_unflatten",
           "header": "mlx/c/ops.h",
           "return": "int",
@@ -7098,6 +7296,29 @@
             "const mlx_stream s"
           ],
           "signature": "int mlx_unflatten(mlx_array* res, const mlx_array a, int axis, const int* shape, size_t shape_num, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_unstack",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_vector_array* res",
+            "const mlx_array a",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_unstack(mlx_vector_array* res, const mlx_array a, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_unstack_axis",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_vector_array* res",
+            "const mlx_array a",
+            "int axis",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_unstack_axis(mlx_vector_array* res, const mlx_array a, int axis, const mlx_stream s)"
         },
         {
           "name": "mlx_var",
@@ -7140,6 +7361,19 @@
             "const mlx_stream s"
           ],
           "signature": "int mlx_var_axis(mlx_array* res, const mlx_array a, int axis, bool keepdims, int ddof, const mlx_stream s)"
+        },
+        {
+          "name": "mlx_vecdot",
+          "header": "mlx/c/ops.h",
+          "return": "int",
+          "parameters": [
+            "mlx_array* res",
+            "const mlx_array a",
+            "const mlx_array b",
+            "int axis",
+            "const mlx_stream s"
+          ],
+          "signature": "int mlx_vecdot(mlx_array* res, const mlx_array a, const mlx_array b, int axis, const mlx_stream s)"
         },
         {
           "name": "mlx_view",
