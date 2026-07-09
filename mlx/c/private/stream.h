@@ -6,6 +6,7 @@
 #ifndef MLX_STREAM_PRIVATE_H
 #define MLX_STREAM_PRIVATE_H
 
+#include "mlx/c/private/enums.h"
 #include "mlx/c/stream.h"
 #include "mlx/mlx.h"
 
