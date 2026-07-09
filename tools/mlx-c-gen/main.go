@@ -49,6 +49,7 @@ var standaloneGenerators = map[string]func(mode string) string{
 
 func main() {
 	generateArgs := os.Args[1:]
+	defaultGenerateNoArgs := len(os.Args) == 1
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "check":
@@ -93,6 +94,10 @@ func main() {
 
 	mlxSrcPath, err := discoverMLXSource(*mlxSrc)
 	if err != nil {
+		if defaultGenerateNoArgs && *mlxSrc == "" {
+			flag.Usage()
+			return
+		}
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
 	}
