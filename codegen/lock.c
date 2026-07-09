@@ -114,6 +114,8 @@ _Static_assert(sizeof(mlx_device_info) == sizeof(void *), "mlx_device_info ABI b
 static int mlx_c_lock_mlx_device_info_ctx(void) { return (int)offsetof(mlx_device_info, ctx); }
 _Static_assert(sizeof(mlx_distributed_group) == sizeof(void *), "mlx_distributed_group ABI break");
 static int mlx_c_lock_mlx_distributed_group_ctx(void) { return (int)offsetof(mlx_distributed_group, ctx); }
+_Static_assert(sizeof(mlx_event) == sizeof(void *), "mlx_event ABI break");
+static int mlx_c_lock_mlx_event_ctx(void) { return (int)offsetof(mlx_event, ctx); }
 _Static_assert(sizeof(mlx_function_exporter) == sizeof(void *), "mlx_function_exporter ABI break");
 static int mlx_c_lock_mlx_function_exporter_ctx(void) { return (int)offsetof(mlx_function_exporter, ctx); }
 _Static_assert(sizeof(mlx_imported_function) == sizeof(void *), "mlx_imported_function ABI break");
@@ -126,6 +128,8 @@ _Static_assert(sizeof(mlx_fast_metal_kernel) == sizeof(void *), "mlx_fast_metal_
 static int mlx_c_lock_mlx_fast_metal_kernel_ctx(void) { return (int)offsetof(mlx_fast_metal_kernel, ctx); }
 _Static_assert(sizeof(mlx_fast_metal_kernel_config) == sizeof(void *), "mlx_fast_metal_kernel_config ABI break");
 static int mlx_c_lock_mlx_fast_metal_kernel_config_ctx(void) { return (int)offsetof(mlx_fast_metal_kernel_config, ctx); }
+_Static_assert(sizeof(mlx_fence) == sizeof(void *), "mlx_fence ABI break");
+static int mlx_c_lock_mlx_fence_ctx(void) { return (int)offsetof(mlx_fence, ctx); }
 _Static_assert(sizeof(mlx_node_namer) == sizeof(void *), "mlx_node_namer ABI break");
 static int mlx_c_lock_mlx_node_namer_ctx(void) { return (int)offsetof(mlx_node_namer, ctx); }
 _Static_assert(sizeof(mlx_io_gguf) == sizeof(void *), "mlx_io_gguf ABI break");
@@ -320,6 +324,17 @@ extern int mlx_distributed_init(mlx_distributed_group* res, bool strict, const c
 extern bool mlx_distributed_is_available(const char* bk);
 extern void _mlx_error(const char* file, const int line, const char* fmt, ...);
 extern void mlx_set_error_handler(mlx_error_handler_func handler, void* data, void (*dtor)(void*));
+extern int mlx_event_free(mlx_event event);
+extern int mlx_event_is_signaled(bool* res, mlx_event event);
+extern mlx_event mlx_event_new(void);
+extern mlx_event mlx_event_new_stream(mlx_stream stream);
+extern int mlx_event_set_value(mlx_event event, uint64_t value);
+extern int mlx_event_signal(mlx_event event, mlx_stream stream);
+extern int mlx_event_stream(mlx_stream* res, mlx_event event);
+extern int mlx_event_valid(bool* res, mlx_event event);
+extern int mlx_event_value(uint64_t* res, mlx_event event);
+extern int mlx_event_wait(mlx_event event);
+extern int mlx_event_wait_stream(mlx_event event, mlx_stream stream);
 extern int mlx_export_function(const char* file, const mlx_closure fun, const mlx_vector_array args, bool shapeless);
 extern int mlx_export_function_kwargs(const char* file, const mlx_closure_kwargs fun, const mlx_vector_array args, const mlx_map_string_to_array kwargs, bool shapeless);
 extern int mlx_function_exporter_apply(const mlx_function_exporter xfunc, const mlx_vector_array args);
@@ -361,6 +376,11 @@ extern int mlx_fast_rms_norm(mlx_array* res, const mlx_array x, const mlx_array 
 extern int mlx_fast_rope(mlx_array* res, const mlx_array x, int dims, bool traditional, mlx_optional_float base, float scale, int offset, const mlx_array freqs, const mlx_stream s);
 extern int mlx_fast_rope_dynamic(mlx_array* res, const mlx_array x, int dims, bool traditional, mlx_optional_float base, float scale, const mlx_array offset, const mlx_array freqs, const mlx_stream s);
 extern int mlx_fast_scaled_dot_product_attention(mlx_array* res, const mlx_array queries, const mlx_array keys, const mlx_array values, float scale, const char* mask_mode, const mlx_array mask_arr, const mlx_array sinks, const mlx_stream s);
+extern int mlx_fence_free(mlx_fence fence);
+extern mlx_fence mlx_fence_new(void);
+extern mlx_fence mlx_fence_new_stream(mlx_stream stream);
+extern int mlx_fence_update(mlx_fence fence, mlx_stream stream, const mlx_array x, bool cross_device);
+extern int mlx_fence_wait(mlx_fence fence, mlx_stream stream, const mlx_array x);
 extern int mlx_fft_fft(mlx_array* res, const mlx_array a, int n, int axis, mlx_fft_norm norm, const mlx_stream s);
 extern int mlx_fft_fft2(mlx_array* res, const mlx_array a, const int* n, size_t n_num, const int* axes, size_t axes_num, mlx_fft_norm norm, const mlx_stream s);
 extern int mlx_fft_fftfreq(mlx_array* res, int n, double d, const mlx_stream s);
