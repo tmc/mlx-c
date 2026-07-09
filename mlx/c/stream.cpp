@@ -32,6 +32,54 @@ extern "C" mlx_stream mlx_stream_new_device(mlx_device dev) {
     return mlx_stream_new_();
   }
 }
+
+extern "C" mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev) {
+  try {
+    return mlx_stream_new_(
+        mlx::core::new_thread_unsafe_stream(mlx_device_get_(dev)));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return mlx_stream_new_();
+  }
+}
+
+extern "C" mlx_thread_local_stream mlx_thread_local_stream_new_device(
+    mlx_device dev) {
+  try {
+    return mlx_thread_local_stream_new_(
+        mlx::core::new_thread_local_stream(mlx_device_get_(dev)));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return mlx_thread_local_stream({nullptr});
+  }
+}
+
+extern "C" int mlx_thread_local_stream_free(
+    mlx_thread_local_stream stream) {
+  try {
+    mlx_thread_local_stream_free_(stream);
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
+extern "C" int mlx_stream_from_thread_local(
+    mlx_stream* stream,
+    mlx_thread_local_stream thread_local_stream) {
+  try {
+    mlx_stream_set_(
+        *stream,
+        mlx::core::stream_from_thread_local_stream(
+            mlx_thread_local_stream_get_(thread_local_stream)));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
 extern "C" int mlx_stream_set(mlx_stream* stream, const mlx_stream src) {
   try {
     mlx_stream_set_(*stream, mlx_stream_get_(src));
@@ -80,6 +128,27 @@ extern "C" int mlx_synchronize(mlx_stream stream) {
   }
   return 0;
 }
+
+extern "C" int mlx_synchronize_default(void) {
+  try {
+    mlx::core::synchronize();
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
+extern "C" int mlx_synchronize_thread_local(mlx_thread_local_stream stream) {
+  try {
+    mlx::core::synchronize(mlx_thread_local_stream_get_(stream));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
 extern "C" int mlx_get_default_stream(mlx_stream* stream, mlx_device dev) {
   try {
     mlx_stream_set_(*stream, mlx::core::default_stream(mlx_device_get_(dev)));
@@ -106,6 +175,16 @@ extern "C" mlx_stream mlx_default_cpu_stream_new(void) {
     mlx_error(e.what());
     return mlx_stream_new_();
   }
+}
+
+extern "C" int mlx_clear_streams(void) {
+  try {
+    mlx::core::clear_streams();
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
 }
 extern "C" mlx_stream mlx_default_gpu_stream_new(void) {
   try {

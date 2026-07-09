@@ -21,6 +21,17 @@ inline mlx_stream mlx_stream_new_(mlx::core::Stream&& s) {
   return mlx_stream({new mlx::core::Stream(std::move(s))});
 }
 
+inline mlx_thread_local_stream mlx_thread_local_stream_new_(
+    const mlx::core::ThreadLocalStream& s) {
+  return mlx_thread_local_stream({new mlx::core::ThreadLocalStream(s)});
+}
+
+inline mlx_thread_local_stream mlx_thread_local_stream_new_(
+    mlx::core::ThreadLocalStream&& s) {
+  return mlx_thread_local_stream(
+      {new mlx::core::ThreadLocalStream(std::move(s))});
+}
+
 inline mlx_stream& mlx_stream_set_(mlx_stream& d, const mlx::core::Stream& s) {
   if (d.ctx) {
     *static_cast<mlx::core::Stream*>(d.ctx) = s;
@@ -46,9 +57,23 @@ inline mlx::core::Stream& mlx_stream_get_(mlx_stream d) {
   return *static_cast<mlx::core::Stream*>(d.ctx);
 }
 
+inline mlx::core::ThreadLocalStream& mlx_thread_local_stream_get_(
+    mlx_thread_local_stream d) {
+  if (!d.ctx) {
+    throw std::runtime_error("expected a non-empty mlx_thread_local_stream");
+  }
+  return *static_cast<mlx::core::ThreadLocalStream*>(d.ctx);
+}
+
 inline void mlx_stream_free_(mlx_stream d) {
   if (d.ctx) {
     delete static_cast<mlx::core::Stream*>(d.ctx);
+  }
+}
+
+inline void mlx_thread_local_stream_free_(mlx_thread_local_stream d) {
+  if (d.ctx) {
+    delete static_cast<mlx::core::ThreadLocalStream*>(d.ctx);
   }
 }
 

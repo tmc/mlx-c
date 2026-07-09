@@ -878,6 +878,17 @@
           ]
         },
         {
+          "name": "mlx_thread_local_stream",
+          "header": "mlx/c/stream.h",
+          "opaque": true,
+          "fields": [
+            {
+              "name": "ctx",
+              "declaration": "void* ctx"
+            }
+          ]
+        },
+        {
           "name": "mlx_string",
           "header": "mlx/c/string.h",
           "opaque": true,
@@ -7865,6 +7876,13 @@
           "signature": "int mlx_random_uniform(mlx_array* res, const mlx_array low, const mlx_array high, const int* shape, size_t shape_num, mlx_dtype dtype, const mlx_array key, const mlx_stream s)"
         },
         {
+          "name": "mlx_clear_streams",
+          "header": "mlx/c/stream.h",
+          "return": "int",
+          "parameters": null,
+          "signature": "int mlx_clear_streams(void)"
+        },
+        {
           "name": "mlx_default_cpu_stream_new",
           "header": "mlx/c/stream.h",
           "return": "mlx_stream",
@@ -7917,6 +7935,16 @@
           "signature": "int mlx_stream_free(mlx_stream stream)"
         },
         {
+          "name": "mlx_stream_from_thread_local",
+          "header": "mlx/c/stream.h",
+          "return": "int",
+          "parameters": [
+            "mlx_stream* stream",
+            "mlx_thread_local_stream thread_local_stream"
+          ],
+          "signature": "int mlx_stream_from_thread_local(mlx_stream* stream, mlx_thread_local_stream thread_local_stream)"
+        },
+        {
           "name": "mlx_stream_get_device",
           "header": "mlx/c/stream.h",
           "return": "int",
@@ -7953,6 +7981,15 @@
           "signature": "mlx_stream mlx_stream_new_device(mlx_device dev)"
         },
         {
+          "name": "mlx_stream_new_thread_unsafe_device",
+          "header": "mlx/c/stream.h",
+          "return": "mlx_stream",
+          "parameters": [
+            "mlx_device dev"
+          ],
+          "signature": "mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev)"
+        },
+        {
           "name": "mlx_stream_set",
           "header": "mlx/c/stream.h",
           "return": "int",
@@ -7980,6 +8017,40 @@
             "mlx_stream stream"
           ],
           "signature": "int mlx_synchronize(mlx_stream stream)"
+        },
+        {
+          "name": "mlx_synchronize_default",
+          "header": "mlx/c/stream.h",
+          "return": "int",
+          "parameters": null,
+          "signature": "int mlx_synchronize_default(void)"
+        },
+        {
+          "name": "mlx_synchronize_thread_local",
+          "header": "mlx/c/stream.h",
+          "return": "int",
+          "parameters": [
+            "mlx_thread_local_stream stream"
+          ],
+          "signature": "int mlx_synchronize_thread_local(mlx_thread_local_stream stream)"
+        },
+        {
+          "name": "mlx_thread_local_stream_free",
+          "header": "mlx/c/stream.h",
+          "return": "int",
+          "parameters": [
+            "mlx_thread_local_stream stream"
+          ],
+          "signature": "int mlx_thread_local_stream_free(mlx_thread_local_stream stream)"
+        },
+        {
+          "name": "mlx_thread_local_stream_new_device",
+          "header": "mlx/c/stream.h",
+          "return": "mlx_thread_local_stream",
+          "parameters": [
+            "mlx_device dev"
+          ],
+          "signature": "mlx_thread_local_stream mlx_thread_local_stream_new_device(mlx_device dev)"
         },
         {
           "name": "mlx_string_data",
