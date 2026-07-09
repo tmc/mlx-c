@@ -880,11 +880,19 @@
         {
           "name": "mlx_thread_local_stream",
           "header": "mlx/c/stream.h",
-          "opaque": true,
+          "opaque": false,
           "fields": [
             {
-              "name": "ctx",
-              "declaration": "void* ctx"
+              "name": "index",
+              "declaration": "int index"
+            },
+            {
+              "name": "device_type",
+              "declaration": "mlx_device_type device_type"
+            },
+            {
+              "name": "device_index",
+              "declaration": "int device_index"
             }
           ]
         },
@@ -7876,13 +7884,6 @@
           "signature": "int mlx_random_uniform(mlx_array* res, const mlx_array low, const mlx_array high, const int* shape, size_t shape_num, mlx_dtype dtype, const mlx_array key, const mlx_stream s)"
         },
         {
-          "name": "mlx_clear_streams",
-          "header": "mlx/c/stream.h",
-          "return": "int",
-          "parameters": null,
-          "signature": "int mlx_clear_streams(void)"
-        },
-        {
           "name": "mlx_default_cpu_stream_new",
           "header": "mlx/c/stream.h",
           "return": "mlx_stream",
@@ -7905,6 +7906,15 @@
             "mlx_device dev"
           ],
           "signature": "int mlx_get_default_stream(mlx_stream* stream, mlx_device dev)"
+        },
+        {
+          "name": "mlx_new_thread_local_stream",
+          "header": "mlx/c/stream.h",
+          "return": "mlx_thread_local_stream",
+          "parameters": [
+            "mlx_device dev"
+          ],
+          "signature": "mlx_thread_local_stream mlx_new_thread_local_stream(mlx_device dev)"
         },
         {
           "name": "mlx_set_default_stream",
@@ -7943,6 +7953,15 @@
             "mlx_thread_local_stream thread_local_stream"
           ],
           "signature": "int mlx_stream_from_thread_local(mlx_stream* stream, mlx_thread_local_stream thread_local_stream)"
+        },
+        {
+          "name": "mlx_stream_from_thread_local_stream",
+          "header": "mlx/c/stream.h",
+          "return": "mlx_stream",
+          "parameters": [
+            "mlx_thread_local_stream stream"
+          ],
+          "signature": "mlx_stream mlx_stream_from_thread_local_stream(mlx_thread_local_stream stream)"
         },
         {
           "name": "mlx_stream_get_device",
@@ -8035,15 +8054,6 @@
           "signature": "int mlx_synchronize_thread_local(mlx_thread_local_stream stream)"
         },
         {
-          "name": "mlx_thread_local_stream_free",
-          "header": "mlx/c/stream.h",
-          "return": "int",
-          "parameters": [
-            "mlx_thread_local_stream stream"
-          ],
-          "signature": "int mlx_thread_local_stream_free(mlx_thread_local_stream stream)"
-        },
-        {
           "name": "mlx_thread_local_stream_new_device",
           "header": "mlx/c/stream.h",
           "return": "mlx_thread_local_stream",
@@ -8051,6 +8061,15 @@
             "mlx_device dev"
           ],
           "signature": "mlx_thread_local_stream mlx_thread_local_stream_new_device(mlx_device dev)"
+        },
+        {
+          "name": "mlx_thread_local_stream_synchronize",
+          "header": "mlx/c/stream.h",
+          "return": "int",
+          "parameters": [
+            "mlx_thread_local_stream stream"
+          ],
+          "signature": "int mlx_thread_local_stream_synchronize(mlx_thread_local_stream stream)"
         },
         {
           "name": "mlx_string_data",

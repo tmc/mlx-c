@@ -165,8 +165,9 @@ static int mlx_c_lock_mlx_optional_int_value(void) { return (int)offsetof(mlx_op
 static int mlx_c_lock_mlx_optional_int_has_value(void) { return (int)offsetof(mlx_optional_int, has_value); }
 _Static_assert(sizeof(mlx_stream) == sizeof(void *), "mlx_stream ABI break");
 static int mlx_c_lock_mlx_stream_ctx(void) { return (int)offsetof(mlx_stream, ctx); }
-_Static_assert(sizeof(mlx_thread_local_stream) == sizeof(void *), "mlx_thread_local_stream ABI break");
-static int mlx_c_lock_mlx_thread_local_stream_ctx(void) { return (int)offsetof(mlx_thread_local_stream, ctx); }
+static int mlx_c_lock_mlx_thread_local_stream_index(void) { return (int)offsetof(mlx_thread_local_stream, index); }
+static int mlx_c_lock_mlx_thread_local_stream_device_type(void) { return (int)offsetof(mlx_thread_local_stream, device_type); }
+static int mlx_c_lock_mlx_thread_local_stream_device_index(void) { return (int)offsetof(mlx_thread_local_stream, device_index); }
 _Static_assert(sizeof(mlx_string) == sizeof(void *), "mlx_string ABI break");
 static int mlx_c_lock_mlx_string_ctx(void) { return (int)offsetof(mlx_string, ctx); }
 _Static_assert(sizeof(mlx_vector_array) == sizeof(void *), "mlx_vector_array ABI break");
@@ -762,14 +763,15 @@ extern int mlx_random_split(mlx_array* res_0, mlx_array* res_1, const mlx_array 
 extern int mlx_random_split_num(mlx_array* res, const mlx_array key, int num, const mlx_stream s);
 extern int mlx_random_truncated_normal(mlx_array* res, const mlx_array lower, const mlx_array upper, const int* shape, size_t shape_num, mlx_dtype dtype, const mlx_array key, const mlx_stream s);
 extern int mlx_random_uniform(mlx_array* res, const mlx_array low, const mlx_array high, const int* shape, size_t shape_num, mlx_dtype dtype, const mlx_array key, const mlx_stream s);
-extern int mlx_clear_streams(void);
 extern mlx_stream mlx_default_cpu_stream_new(void);
 extern mlx_stream mlx_default_gpu_stream_new(void);
 extern int mlx_get_default_stream(mlx_stream* stream, mlx_device dev);
+extern mlx_thread_local_stream mlx_new_thread_local_stream(mlx_device dev);
 extern int mlx_set_default_stream(mlx_stream stream);
 extern bool mlx_stream_equal(mlx_stream lhs, mlx_stream rhs);
 extern int mlx_stream_free(mlx_stream stream);
 extern int mlx_stream_from_thread_local(mlx_stream* stream, mlx_thread_local_stream thread_local_stream);
+extern mlx_stream mlx_stream_from_thread_local_stream(mlx_thread_local_stream stream);
 extern int mlx_stream_get_device(mlx_device* dev, mlx_stream stream);
 extern int mlx_stream_get_index(int* index, mlx_stream stream);
 extern mlx_stream mlx_stream_new(void);
@@ -780,8 +782,8 @@ extern int mlx_stream_tostring(mlx_string* str, mlx_stream stream);
 extern int mlx_synchronize(mlx_stream stream);
 extern int mlx_synchronize_default(void);
 extern int mlx_synchronize_thread_local(mlx_thread_local_stream stream);
-extern int mlx_thread_local_stream_free(mlx_thread_local_stream stream);
 extern mlx_thread_local_stream mlx_thread_local_stream_new_device(mlx_device dev);
+extern int mlx_thread_local_stream_synchronize(mlx_thread_local_stream stream);
 extern const char* mlx_string_data(mlx_string str);
 extern int mlx_string_free(mlx_string str);
 extern mlx_string mlx_string_new(void);

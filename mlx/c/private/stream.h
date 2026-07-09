@@ -23,13 +23,16 @@ inline mlx_stream mlx_stream_new_(mlx::core::Stream&& s) {
 
 inline mlx_thread_local_stream mlx_thread_local_stream_new_(
     const mlx::core::ThreadLocalStream& s) {
-  return mlx_thread_local_stream({new mlx::core::ThreadLocalStream(s)});
+  return mlx_thread_local_stream{
+      s.index,
+      mlx_device_type_to_c(s.device.type),
+      s.device.index,
+  };
 }
 
 inline mlx_thread_local_stream mlx_thread_local_stream_new_(
     mlx::core::ThreadLocalStream&& s) {
-  return mlx_thread_local_stream(
-      {new mlx::core::ThreadLocalStream(std::move(s))});
+  return mlx_thread_local_stream_new_(s);
 }
 
 inline mlx_stream& mlx_stream_set_(mlx_stream& d, const mlx::core::Stream& s) {
@@ -59,21 +62,19 @@ inline mlx::core::Stream& mlx_stream_get_(mlx_stream d) {
 
 inline mlx::core::ThreadLocalStream& mlx_thread_local_stream_get_(
     mlx_thread_local_stream d) {
-  if (!d.ctx) {
-    throw std::runtime_error("expected a non-empty mlx_thread_local_stream");
-  }
-  return *static_cast<mlx::core::ThreadLocalStream*>(d.ctx);
+  static thread_local mlx::core::ThreadLocalStream s(
+      d.index,
+      mlx::core::Device(mlx_device_type_to_cpp(d.device_type), d.device_index));
+  s.index = d.index;
+  s.device = mlx::core::Device(
+      mlx_device_type_to_cpp(d.device_type),
+      d.device_index);
+  return s;
 }
 
 inline void mlx_stream_free_(mlx_stream d) {
   if (d.ctx) {
     delete static_cast<mlx::core::Stream*>(d.ctx);
-  }
-}
-
-inline void mlx_thread_local_stream_free_(mlx_thread_local_stream d) {
-  if (d.ctx) {
-    delete static_cast<mlx::core::ThreadLocalStream*>(d.ctx);
   }
 }
 
