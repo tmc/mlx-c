@@ -3,8 +3,8 @@ package doccoverage
 import (
 	"testing"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/ir"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/plan"
+	"github.com/tmc/mlx-c/internal/mlxcgen/ir"
+	"github.com/tmc/mlx-c/internal/mlxcgen/plan"
 )
 
 func TestAnalyzeReportsSelectedMissingDocs(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/regenreport"
+	"github.com/tmc/mlx-c/internal/mlxcgen/regenreport"
 )
 
 func main() {

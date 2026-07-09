@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/customspec"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/inventory"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/ir"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/plan"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/types"
+	"github.com/tmc/mlx-c/internal/mlxcgen/customspec"
+	"github.com/tmc/mlx-c/internal/mlxcgen/inventory"
+	"github.com/tmc/mlx-c/internal/mlxcgen/ir"
+	"github.com/tmc/mlx-c/internal/mlxcgen/plan"
+	"github.com/tmc/mlx-c/internal/mlxcgen/types"
 )
 
 func TestCompare(t *testing.T) {

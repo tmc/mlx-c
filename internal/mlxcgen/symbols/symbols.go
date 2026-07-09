@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/apilock"
+	"github.com/tmc/mlx-c/internal/mlxcgen/apilock"
 )
 
 // TargetLibrary maps one lock target to a built library path.

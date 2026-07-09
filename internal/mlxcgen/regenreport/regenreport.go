@@ -13,13 +13,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/customspec"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/doccoverage"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/inventory"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/ir"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/parser"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/plan"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/types"
+	"github.com/tmc/mlx-c/internal/mlxcgen/customspec"
+	"github.com/tmc/mlx-c/internal/mlxcgen/doccoverage"
+	"github.com/tmc/mlx-c/internal/mlxcgen/inventory"
+	"github.com/tmc/mlx-c/internal/mlxcgen/ir"
+	"github.com/tmc/mlx-c/internal/mlxcgen/parser"
+	"github.com/tmc/mlx-c/internal/mlxcgen/plan"
+	"github.com/tmc/mlx-c/internal/mlxcgen/types"
 	"gopkg.in/yaml.v3"
 )
 

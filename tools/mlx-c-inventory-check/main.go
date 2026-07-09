@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/inventory"
+	"github.com/tmc/mlx-c/internal/mlxcgen/inventory"
 )
 
 func main() {

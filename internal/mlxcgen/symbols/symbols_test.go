@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/apilock"
+	"github.com/tmc/mlx-c/internal/mlxcgen/apilock"
 )
 
 func TestParseNM(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/ir"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/parser"
+	"github.com/tmc/mlx-c/internal/mlxcgen/ir"
+	"github.com/tmc/mlx-c/internal/mlxcgen/parser"
 )
 
 func TestGenerateYamlIncludesParserDiagnostics(t *testing.T) {

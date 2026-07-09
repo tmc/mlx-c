@@ -7,16 +7,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/apilock"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/customspec"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/doccoverage"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/generators"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/ir"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/parser"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/plan"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/regenreport"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/symbols"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/types"
+	"github.com/tmc/mlx-c/internal/mlxcgen/apilock"
+	"github.com/tmc/mlx-c/internal/mlxcgen/customspec"
+	"github.com/tmc/mlx-c/internal/mlxcgen/doccoverage"
+	"github.com/tmc/mlx-c/internal/mlxcgen/generators"
+	"github.com/tmc/mlx-c/internal/mlxcgen/ir"
+	"github.com/tmc/mlx-c/internal/mlxcgen/parser"
+	"github.com/tmc/mlx-c/internal/mlxcgen/plan"
+	"github.com/tmc/mlx-c/internal/mlxcgen/regenreport"
+	"github.com/tmc/mlx-c/internal/mlxcgen/symbols"
+	"github.com/tmc/mlx-c/internal/mlxcgen/types"
 )
 
 func TestPrepareOutputDirCreatesPrivateDir(t *testing.T) {

@@ -5,10 +5,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/hooks"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/ir"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/plan"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/types"
+	"github.com/tmc/mlx-c/internal/mlxcgen/hooks"
+	"github.com/tmc/mlx-c/internal/mlxcgen/ir"
+	"github.com/tmc/mlx-c/internal/mlxcgen/plan"
+	"github.com/tmc/mlx-c/internal/mlxcgen/types"
 )
 
 // Coverage counts generated C declarations with and without documentation.

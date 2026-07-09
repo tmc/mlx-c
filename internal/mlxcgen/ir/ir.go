@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/parser"
+	"github.com/tmc/mlx-c/internal/mlxcgen/parser"
 )
 
 // DeclID identifies an upstream declaration by module, header, namespace, name,

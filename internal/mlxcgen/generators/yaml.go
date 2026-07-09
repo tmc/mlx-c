@@ -4,8 +4,8 @@ import (
 	"io"
 	"sort"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/ir"
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/parser"
+	"github.com/tmc/mlx-c/internal/mlxcgen/ir"
+	"github.com/tmc/mlx-c/internal/mlxcgen/parser"
 	"gopkg.in/yaml.v3"
 )
 

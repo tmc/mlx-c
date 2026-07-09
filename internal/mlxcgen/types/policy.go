@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/ir"
+	"github.com/tmc/mlx-c/internal/mlxcgen/ir"
 	"gopkg.in/yaml.v3"
 )
 

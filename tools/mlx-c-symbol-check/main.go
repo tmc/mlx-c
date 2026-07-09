@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/symbols"
+	"github.com/tmc/mlx-c/internal/mlxcgen/symbols"
 )
 
 type targetFlags []symbols.TargetLibrary

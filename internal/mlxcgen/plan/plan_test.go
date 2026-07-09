@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/inventory"
+	"github.com/tmc/mlx-c/internal/mlxcgen/inventory"
 )
 
 func TestDefaultManifestPreservesPlan(t *testing.T) {

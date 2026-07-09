@@ -3,7 +3,7 @@ package ir
 import (
 	"testing"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/parser"
+	"github.com/tmc/mlx-c/internal/mlxcgen/parser"
 )
 
 func TestFromParseResultNormalizesFunctions(t *testing.T) {

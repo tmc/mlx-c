@@ -3,7 +3,7 @@ package variants
 import (
 	"testing"
 
-	"github.com/ml-explore/mlx-c/internal/mlxcgen/plan"
+	"github.com/tmc/mlx-c/internal/mlxcgen/plan"
 )
 
 func testPolicy() variantPolicy {
