@@ -15,7 +15,6 @@
 #include "mlx/c/event.h"
 #include "mlx/c/export.h"
 #include "mlx/c/fast.h"
-#include "mlx/c/fence.h"
 #include "mlx/c/fft.h"
 #include "mlx/c/graph_utils.h"
 #include "mlx/c/half.h"

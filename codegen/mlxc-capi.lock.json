@@ -408,7 +408,6 @@
         "mlx/c/event.h",
         "mlx/c/export.h",
         "mlx/c/fast.h",
-        "mlx/c/fence.h",
         "mlx/c/fft.h",
         "mlx/c/graph_utils.h",
         "mlx/c/half.h",
@@ -648,17 +647,6 @@
         {
           "name": "mlx_fast_metal_kernel_config",
           "header": "mlx/c/fast.h",
-          "opaque": true,
-          "fields": [
-            {
-              "name": "ctx",
-              "declaration": "void* ctx"
-            }
-          ]
-        },
-        {
-          "name": "mlx_fence",
-          "header": "mlx/c/fence.h",
           "opaque": true,
           "fields": [
             {
@@ -2532,36 +2520,20 @@
           "header": "mlx/c/event.h",
           "return": "int",
           "parameters": [
-            "bool* res",
+            "bool* result",
             "mlx_event event"
           ],
-          "signature": "int mlx_event_is_signaled(bool* res, mlx_event event)"
+          "signature": "int mlx_event_is_signaled(bool* result, mlx_event event)"
         },
         {
           "name": "mlx_event_new",
           "header": "mlx/c/event.h",
-          "return": "mlx_event",
-          "parameters": null,
-          "signature": "mlx_event mlx_event_new(void)"
-        },
-        {
-          "name": "mlx_event_new_stream",
-          "header": "mlx/c/event.h",
-          "return": "mlx_event",
-          "parameters": [
-            "mlx_stream stream"
-          ],
-          "signature": "mlx_event mlx_event_new_stream(mlx_stream stream)"
-        },
-        {
-          "name": "mlx_event_set_value",
-          "header": "mlx/c/event.h",
           "return": "int",
           "parameters": [
-            "mlx_event event",
-            "uint64_t value"
+            "mlx_event* event",
+            "mlx_stream stream"
           ],
-          "signature": "int mlx_event_set_value(mlx_event event, uint64_t value)"
+          "signature": "int mlx_event_new(mlx_event* event, mlx_stream stream)"
         },
         {
           "name": "mlx_event_signal",
@@ -2572,36 +2544,6 @@
             "mlx_stream stream"
           ],
           "signature": "int mlx_event_signal(mlx_event event, mlx_stream stream)"
-        },
-        {
-          "name": "mlx_event_stream",
-          "header": "mlx/c/event.h",
-          "return": "int",
-          "parameters": [
-            "mlx_stream* res",
-            "mlx_event event"
-          ],
-          "signature": "int mlx_event_stream(mlx_stream* res, mlx_event event)"
-        },
-        {
-          "name": "mlx_event_valid",
-          "header": "mlx/c/event.h",
-          "return": "int",
-          "parameters": [
-            "bool* res",
-            "mlx_event event"
-          ],
-          "signature": "int mlx_event_valid(bool* res, mlx_event event)"
-        },
-        {
-          "name": "mlx_event_value",
-          "header": "mlx/c/event.h",
-          "return": "int",
-          "parameters": [
-            "uint64_t* res",
-            "mlx_event event"
-          ],
-          "signature": "int mlx_event_value(uint64_t* res, mlx_event event)"
         },
         {
           "name": "mlx_event_wait",
@@ -3090,54 +3032,6 @@
             "const mlx_stream s"
           ],
           "signature": "int mlx_fast_scaled_dot_product_attention(mlx_array* res, const mlx_array queries, const mlx_array keys, const mlx_array values, float scale, const char* mask_mode, const mlx_array mask_arr, const mlx_array sinks, const mlx_stream s)"
-        },
-        {
-          "name": "mlx_fence_free",
-          "header": "mlx/c/fence.h",
-          "return": "int",
-          "parameters": [
-            "mlx_fence fence"
-          ],
-          "signature": "int mlx_fence_free(mlx_fence fence)"
-        },
-        {
-          "name": "mlx_fence_new",
-          "header": "mlx/c/fence.h",
-          "return": "mlx_fence",
-          "parameters": null,
-          "signature": "mlx_fence mlx_fence_new(void)"
-        },
-        {
-          "name": "mlx_fence_new_stream",
-          "header": "mlx/c/fence.h",
-          "return": "mlx_fence",
-          "parameters": [
-            "mlx_stream stream"
-          ],
-          "signature": "mlx_fence mlx_fence_new_stream(mlx_stream stream)"
-        },
-        {
-          "name": "mlx_fence_update",
-          "header": "mlx/c/fence.h",
-          "return": "int",
-          "parameters": [
-            "mlx_fence fence",
-            "mlx_stream stream",
-            "const mlx_array x",
-            "bool cross_device"
-          ],
-          "signature": "int mlx_fence_update(mlx_fence fence, mlx_stream stream, const mlx_array x, bool cross_device)"
-        },
-        {
-          "name": "mlx_fence_wait",
-          "header": "mlx/c/fence.h",
-          "return": "int",
-          "parameters": [
-            "mlx_fence fence",
-            "mlx_stream stream",
-            "const mlx_array x"
-          ],
-          "signature": "int mlx_fence_wait(mlx_fence fence, mlx_stream stream, const mlx_array x)"
         },
         {
           "name": "mlx_fft_fft",

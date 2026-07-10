@@ -4,8 +4,6 @@
 #define MLX_EVENT_H
 
 #include <stdbool.h>
-#include <stdint.h>
-
 #include "mlx/c/stream.h"
 
 #ifdef __cplusplus
@@ -25,44 +23,22 @@ typedef struct mlx_event_ {
 } mlx_event;
 
 /**
- * Return a new invalid event.
+ * Create a one-shot event associated with stream.
  */
-mlx_event mlx_event_new(void);
-
-/**
- * Return a new event associated with stream.
- */
-mlx_event mlx_event_new_stream(mlx_stream stream);
+int mlx_event_new(mlx_event* event, mlx_stream stream);
 
 /**
  * Free an event.
+ *
+ * Freeing an empty event is allowed. Copies of an event share ownership of the
+ * same handle and must not be freed more than once.
  */
 int mlx_event_free(mlx_event event);
 
 /**
- * Return true when the event has been signaled at its current value.
+ * Return true when the event has been signaled.
  */
-int mlx_event_is_signaled(bool* res, mlx_event event);
-
-/**
- * Return the event stream.
- */
-int mlx_event_stream(mlx_stream* res, mlx_event event);
-
-/**
- * Return the event value.
- */
-int mlx_event_value(uint64_t* res, mlx_event event);
-
-/**
- * Set the event value.
- */
-int mlx_event_set_value(mlx_event event, uint64_t value);
-
-/**
- * Return true when the event is valid.
- */
-int mlx_event_valid(bool* res, mlx_event event);
+int mlx_event_is_signaled(bool* result, mlx_event event);
 
 /**
  * Signal the event in stream.
@@ -70,12 +46,12 @@ int mlx_event_valid(bool* res, mlx_event event);
 int mlx_event_signal(mlx_event event, mlx_stream stream);
 
 /**
- * Wait for the event to be signaled at its current value.
+ * Wait for the event to be signaled.
  */
 int mlx_event_wait(mlx_event event);
 
 /**
- * Wait in stream for the event to be signaled at its current value.
+ * Wait in stream for the event to be signaled.
  */
 int mlx_event_wait_stream(mlx_event event, mlx_stream stream);
 
