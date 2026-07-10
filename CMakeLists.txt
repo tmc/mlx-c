@@ -72,7 +72,10 @@ if(MLX_C_USE_SYSTEM_MLX)
 else()
   set(MLX_C_FETCH_MLX_ARGS
       GIT_REPOSITORY "https://github.com/ml-explore/mlx.git"
-      GIT_TAG v0.32.0)
+      GIT_TAG v0.32.0
+      PATCH_COMMAND
+        ${CMAKE_COMMAND} -DMLX_SOURCE_DIR=<SOURCE_DIR> -P
+        ${CMAKE_CURRENT_LIST_DIR}/cmake/export-mlx-event.cmake)
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
     list(APPEND MLX_C_FETCH_MLX_ARGS EXCLUDE_FROM_ALL)
     FetchContent_Declare(
