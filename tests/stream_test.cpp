@@ -52,6 +52,18 @@ void check_invalid(mlx_thread_local_stream token) {
       "compatibility synchronize accepted an invalid token");
   check(
       !last_error.empty(), "compatibility synchronize did not report an error");
+
+  last_error.clear();
+  check(
+      mlx_stream_from_thread_local_stream_checked(&output, &token) != 0,
+      "pointer resolver accepted an invalid token");
+  check(output.ctx == nullptr, "pointer resolver retained a valid output");
+  check(!last_error.empty(), "pointer resolver did not report an error");
+  last_error.clear();
+  check(
+      mlx_thread_local_stream_synchronize_checked(&token) != 0,
+      "pointer synchronize accepted an invalid token");
+  check(!last_error.empty(), "pointer synchronize did not report an error");
   mlx_device_free(cpu);
 }
 
@@ -90,6 +102,50 @@ int main() {
   mlx_device cpu = mlx_device_new_type(MLX_CPU, 0);
   mlx_thread_local_stream token = mlx_new_thread_local_stream(cpu);
   check(token.index >= 0, "failed to create thread-local stream token");
+
+  mlx_thread_local_stream checked_token = {-1, MLX_CPU, -1};
+  check(
+      mlx_new_thread_local_stream_checked(&checked_token, cpu) == 0,
+      "pointer constructor rejected a valid device");
+  check(
+      checked_token.index >= 0,
+      "pointer constructor returned an invalid token");
+  check(
+      checked_token.device_type == MLX_CPU,
+      "pointer constructor lost device type");
+  check(
+      checked_token.device_index == 0, "pointer constructor lost device index");
+
+  mlx_device nonzero_cpu = mlx_device_new_type(MLX_CPU, 7);
+  mlx_thread_local_stream nonzero_value =
+      mlx_new_thread_local_stream(nonzero_cpu);
+  mlx_thread_local_stream nonzero_checked = {-1, MLX_CPU, -1};
+  check(
+      mlx_new_thread_local_stream_checked(&nonzero_checked, nonzero_cpu) == 0,
+      "pointer constructor rejected a nonzero device index");
+  check(nonzero_value.device_index == 7, "value constructor lost device index");
+  check(
+      nonzero_checked.device_index == 7,
+      "pointer constructor lost nonzero device index");
+  mlx_device_free(nonzero_cpu);
+
+  mlx_stream checked = mlx_stream_new();
+  check(
+      mlx_stream_from_thread_local_stream_checked(&checked, &token) == 0,
+      "pointer resolver rejected a valid token");
+  check(checked.ctx != nullptr, "pointer resolver returned an empty stream");
+  check(
+      mlx_thread_local_stream_synchronize_checked(&token) == 0,
+      "pointer synchronize rejected a valid token");
+  mlx_stream_free(checked);
+
+  last_error.clear();
+  checked = mlx_stream_new();
+  check(
+      mlx_stream_from_thread_local_stream_checked(&checked, nullptr) != 0,
+      "pointer resolver accepted a null token");
+  check(checked.ctx == nullptr, "null token produced a stream");
+  check(!last_error.empty(), "null token did not report an error");
 
   mlx_stream first = mlx_stream_from_thread_local_stream(token);
   mlx_stream second = mlx_stream_from_thread_local_stream(token);

@@ -91,6 +91,14 @@ inline mlx::core::ThreadLocalStream& mlx_thread_local_stream_get_(
   return s;
 }
 
+inline mlx::core::ThreadLocalStream& mlx_thread_local_stream_get_(
+    const mlx_thread_local_stream* d) {
+  if (!d) {
+    throw std::invalid_argument("expected a thread-local stream token");
+  }
+  return mlx_thread_local_stream_get_(*d);
+}
+
 inline void mlx_stream_free_(mlx_stream d) {
   if (d.ctx) {
     delete static_cast<mlx::core::Stream*>(d.ctx);

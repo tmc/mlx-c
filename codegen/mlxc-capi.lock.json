@@ -7917,6 +7917,16 @@
           "signature": "mlx_thread_local_stream mlx_new_thread_local_stream(mlx_device dev)"
         },
         {
+          "name": "mlx_new_thread_local_stream_checked",
+          "header": "mlx/c/stream.h",
+          "return": "int",
+          "parameters": [
+            "mlx_thread_local_stream* stream",
+            "mlx_device dev"
+          ],
+          "signature": "int mlx_new_thread_local_stream_checked(mlx_thread_local_stream* stream, mlx_device dev)"
+        },
+        {
           "name": "mlx_set_default_stream",
           "header": "mlx/c/stream.h",
           "return": "int",
@@ -7962,6 +7972,16 @@
             "mlx_thread_local_stream stream"
           ],
           "signature": "mlx_stream mlx_stream_from_thread_local_stream(mlx_thread_local_stream stream)"
+        },
+        {
+          "name": "mlx_stream_from_thread_local_stream_checked",
+          "header": "mlx/c/stream.h",
+          "return": "int",
+          "parameters": [
+            "mlx_stream* stream",
+            "const mlx_thread_local_stream* thread_local_stream"
+          ],
+          "signature": "int mlx_stream_from_thread_local_stream_checked(mlx_stream* stream, const mlx_thread_local_stream* thread_local_stream)"
         },
         {
           "name": "mlx_stream_get_device",
@@ -8070,6 +8090,15 @@
             "mlx_thread_local_stream stream"
           ],
           "signature": "int mlx_thread_local_stream_synchronize(mlx_thread_local_stream stream)"
+        },
+        {
+          "name": "mlx_thread_local_stream_synchronize_checked",
+          "header": "mlx/c/stream.h",
+          "return": "int",
+          "parameters": [
+            "const mlx_thread_local_stream* stream"
+          ],
+          "signature": "int mlx_thread_local_stream_synchronize_checked(const mlx_thread_local_stream* stream)"
         },
         {
           "name": "mlx_string_data",
