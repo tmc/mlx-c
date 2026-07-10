@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # ----------------------------- Setup -----------------------------
 project(mlx.data LANGUAGES CXX C)
+include(CTest)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS
     ON
@@ -181,6 +182,10 @@ endif()
 
 if(MLX_C_BUILD_EXAMPLES)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/examples)
+endif()
+
+if(BUILD_TESTING)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tests)
 endif()
 
 # ----------------------------- Installation -----------------------------

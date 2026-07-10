@@ -10,6 +10,27 @@
 #include "mlx/c/stream.h"
 #include "mlx/mlx.h"
 
+inline mlx::core::Device mlx_thread_local_stream_device_(
+    mlx_thread_local_stream stream) {
+  if (stream.index < 0) {
+    throw std::invalid_argument(
+        "thread-local stream index must be non-negative");
+  }
+  if (stream.device_type != MLX_CPU && stream.device_type != MLX_GPU) {
+    throw std::invalid_argument("invalid thread-local stream device type");
+  }
+  if (stream.device_index < 0) {
+    throw std::invalid_argument(
+        "thread-local stream device index must be non-negative");
+  }
+  auto type = mlx_device_type_to_cpp(stream.device_type);
+  if (stream.device_index >= mlx::core::device_count(type)) {
+    throw std::invalid_argument(
+        "thread-local stream device index out of range");
+  }
+  return mlx::core::Device(type, stream.device_index);
+}
+
 inline mlx_stream mlx_stream_new_() {
   return mlx_stream({nullptr});
 }
@@ -63,13 +84,10 @@ inline mlx::core::Stream& mlx_stream_get_(mlx_stream d) {
 
 inline mlx::core::ThreadLocalStream& mlx_thread_local_stream_get_(
     mlx_thread_local_stream d) {
-  static thread_local mlx::core::ThreadLocalStream s(
-      d.index,
-      mlx::core::Device(mlx_device_type_to_cpp(d.device_type), d.device_index));
+  auto device = mlx_thread_local_stream_device_(d);
+  static thread_local mlx::core::ThreadLocalStream s(d.index, device);
   s.index = d.index;
-  s.device = mlx::core::Device(
-      mlx_device_type_to_cpp(d.device_type),
-      d.device_index);
+  s.device = device;
   return s;
 }
 

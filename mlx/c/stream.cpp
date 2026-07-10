@@ -61,8 +61,9 @@ extern "C" mlx_thread_local_stream mlx_thread_local_stream_new_device(
 extern "C" mlx_stream mlx_stream_from_thread_local_stream(
     mlx_thread_local_stream stream) {
   try {
-    return mlx_stream_new_(mlx::core::stream_from_thread_local_stream(
-        mlx_thread_local_stream_get_(stream)));
+    return mlx_stream_new_(
+        mlx::core::stream_from_thread_local_stream(
+            mlx_thread_local_stream_get_(stream)));
   } catch (std::exception& e) {
     mlx_error(e.what());
     return mlx_stream_new_();
@@ -78,6 +79,8 @@ extern "C" int mlx_stream_from_thread_local(
         mlx::core::stream_from_thread_local_stream(
             mlx_thread_local_stream_get_(thread_local_stream)));
   } catch (std::exception& e) {
+    mlx_stream_free_(*stream);
+    *stream = mlx_stream_new_();
     mlx_error(e.what());
     return 1;
   }
