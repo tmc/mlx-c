@@ -26,44 +26,21 @@ void check(bool condition, const char* message) {
 }
 
 void check_invalid(mlx_thread_local_stream token) {
-  last_error.clear();
-  mlx_stream stream = mlx_stream_from_thread_local_stream(token);
-  check(stream.ctx == nullptr, "invalid token resolved to a stream");
-  check(!last_error.empty(), "invalid token did not report an error");
-
   mlx_device cpu = mlx_device_new_type(MLX_CPU, 0);
   mlx_stream output = mlx_stream_new_device(cpu);
-  check(output.ctx != nullptr, "failed to create initial checked output");
-  last_error.clear();
-  check(
-      mlx_stream_from_thread_local(&output, token) != 0,
-      "checked resolver accepted an invalid token");
-  check(output.ctx == nullptr, "checked resolver retained a valid output");
-  check(!last_error.empty(), "checked resolver did not report an error");
+  check(output.ctx != nullptr, "failed to create initial resolver output");
 
   last_error.clear();
   check(
-      mlx_thread_local_stream_synchronize(token) != 0,
+      mlx_thread_local_stream_resolve(&output, &token) != 0,
+      "resolver accepted an invalid token");
+  check(output.ctx == nullptr, "resolver retained a valid output");
+  check(!last_error.empty(), "resolver did not report an error");
+  last_error.clear();
+  check(
+      mlx_thread_local_stream_synchronize(&token) != 0,
       "synchronize accepted an invalid token");
   check(!last_error.empty(), "synchronize did not report an error");
-  last_error.clear();
-  check(
-      mlx_synchronize_thread_local(token) != 0,
-      "compatibility synchronize accepted an invalid token");
-  check(
-      !last_error.empty(), "compatibility synchronize did not report an error");
-
-  last_error.clear();
-  check(
-      mlx_stream_from_thread_local_stream_checked(&output, &token) != 0,
-      "pointer resolver accepted an invalid token");
-  check(output.ctx == nullptr, "pointer resolver retained a valid output");
-  check(!last_error.empty(), "pointer resolver did not report an error");
-  last_error.clear();
-  check(
-      mlx_thread_local_stream_synchronize_checked(&token) != 0,
-      "pointer synchronize accepted an invalid token");
-  check(!last_error.empty(), "pointer synchronize did not report an error");
   mlx_device_free(cpu);
 }
 
@@ -100,55 +77,43 @@ int main() {
   check_invalid({0, MLX_GPU, gpu_count});
 
   mlx_device cpu = mlx_device_new_type(MLX_CPU, 0);
-  mlx_thread_local_stream token = mlx_new_thread_local_stream(cpu);
-  check(token.index >= 0, "failed to create thread-local stream token");
-
-  mlx_thread_local_stream checked_token = {-1, MLX_CPU, -1};
+  mlx_thread_local_stream token = {-1, MLX_CPU, -1};
   check(
-      mlx_new_thread_local_stream_checked(&checked_token, cpu) == 0,
-      "pointer constructor rejected a valid device");
-  check(
-      checked_token.index >= 0,
-      "pointer constructor returned an invalid token");
-  check(
-      checked_token.device_type == MLX_CPU,
-      "pointer constructor lost device type");
-  check(
-      checked_token.device_index == 0, "pointer constructor lost device index");
+      mlx_thread_local_stream_new(&token, cpu) == 0,
+      "constructor rejected a valid device");
+  check(token.index >= 0, "constructor returned an invalid token");
+  check(token.device_type == MLX_CPU, "constructor lost device type");
+  check(token.device_index == 0, "constructor lost device index");
 
   mlx_device nonzero_cpu = mlx_device_new_type(MLX_CPU, 7);
-  mlx_thread_local_stream nonzero_value =
-      mlx_new_thread_local_stream(nonzero_cpu);
-  mlx_thread_local_stream nonzero_checked = {-1, MLX_CPU, -1};
+  mlx_thread_local_stream nonzero = {-1, MLX_CPU, -1};
   check(
-      mlx_new_thread_local_stream_checked(&nonzero_checked, nonzero_cpu) == 0,
-      "pointer constructor rejected a nonzero device index");
-  check(nonzero_value.device_index == 7, "value constructor lost device index");
-  check(
-      nonzero_checked.device_index == 7,
-      "pointer constructor lost nonzero device index");
+      mlx_thread_local_stream_new(&nonzero, nonzero_cpu) == 0,
+      "constructor rejected a nonzero device index");
+  check(nonzero.device_index == 7, "constructor lost nonzero device index");
   mlx_device_free(nonzero_cpu);
 
-  mlx_stream checked = mlx_stream_new();
+  mlx_stream first = mlx_stream_new();
   check(
-      mlx_stream_from_thread_local_stream_checked(&checked, &token) == 0,
-      "pointer resolver rejected a valid token");
-  check(checked.ctx != nullptr, "pointer resolver returned an empty stream");
+      mlx_thread_local_stream_resolve(&first, &token) == 0,
+      "resolver rejected a valid token");
+  check(first.ctx != nullptr, "resolver returned an empty stream");
   check(
-      mlx_thread_local_stream_synchronize_checked(&token) == 0,
-      "pointer synchronize rejected a valid token");
-  mlx_stream_free(checked);
+      mlx_thread_local_stream_synchronize(&token) == 0,
+      "synchronize rejected a valid token");
 
   last_error.clear();
-  checked = mlx_stream_new();
+  mlx_stream checked = mlx_stream_new();
   check(
-      mlx_stream_from_thread_local_stream_checked(&checked, nullptr) != 0,
-      "pointer resolver accepted a null token");
+      mlx_thread_local_stream_resolve(&checked, nullptr) != 0,
+      "resolver accepted a null token");
   check(checked.ctx == nullptr, "null token produced a stream");
   check(!last_error.empty(), "null token did not report an error");
 
-  mlx_stream first = mlx_stream_from_thread_local_stream(token);
-  mlx_stream second = mlx_stream_from_thread_local_stream(token);
+  mlx_stream second = mlx_stream_new();
+  check(
+      mlx_thread_local_stream_resolve(&second, &token) == 0,
+      "second resolution failed");
   check(
       first.ctx != nullptr && second.ctx != nullptr, "failed to resolve token");
   check(mlx_stream_equal(first, second), "same-thread resolutions differ");
@@ -156,7 +121,7 @@ int main() {
       stream_index(first) == stream_index(second),
       "same-thread indices differ");
   check(
-      mlx_thread_local_stream_synchronize(token) == 0,
+      mlx_thread_local_stream_synchronize(&token) == 0,
       "CPU synchronize failed");
   mlx_stream_free(first);
   mlx_stream_free(second);
@@ -165,8 +130,8 @@ int main() {
   std::thread threads[2];
   for (int i = 0; i < 2; i++) {
     threads[i] = std::thread([&, i] {
-      mlx_stream stream = mlx_stream_from_thread_local_stream(token);
-      if (stream.ctx == nullptr) {
+      mlx_stream stream = mlx_stream_new();
+      if (mlx_thread_local_stream_resolve(&stream, &token) != 0) {
         return;
       }
       thread_indices[i] = stream_index(stream);

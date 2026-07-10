@@ -83,20 +83,15 @@ inline mlx::core::Stream& mlx_stream_get_(mlx_stream d) {
 }
 
 inline mlx::core::ThreadLocalStream& mlx_thread_local_stream_get_(
-    mlx_thread_local_stream d) {
-  auto device = mlx_thread_local_stream_device_(d);
-  static thread_local mlx::core::ThreadLocalStream s(d.index, device);
-  s.index = d.index;
-  s.device = device;
-  return s;
-}
-
-inline mlx::core::ThreadLocalStream& mlx_thread_local_stream_get_(
     const mlx_thread_local_stream* d) {
   if (!d) {
     throw std::invalid_argument("expected a thread-local stream token");
   }
-  return mlx_thread_local_stream_get_(*d);
+  auto device = mlx_thread_local_stream_device_(*d);
+  static thread_local mlx::core::ThreadLocalStream s(d->index, device);
+  s.index = d->index;
+  s.device = device;
+  return s;
 }
 
 inline void mlx_stream_free_(mlx_stream d) {

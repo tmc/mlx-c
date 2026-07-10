@@ -43,17 +43,7 @@ extern "C" mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev) {
   }
 }
 
-extern "C" mlx_thread_local_stream mlx_new_thread_local_stream(mlx_device dev) {
-  try {
-    return mlx_thread_local_stream_new_(
-        mlx::core::new_thread_local_stream(mlx_device_get_(dev)));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_thread_local_stream{-1, MLX_CPU, 0};
-  }
-}
-
-extern "C" int mlx_new_thread_local_stream_checked(
+extern "C" int mlx_thread_local_stream_new(
     mlx_thread_local_stream* stream,
     mlx_device dev) {
   try {
@@ -67,43 +57,9 @@ extern "C" int mlx_new_thread_local_stream_checked(
   return 0;
 }
 
-extern "C" mlx_thread_local_stream mlx_thread_local_stream_new_device(
-    mlx_device dev) {
-  return mlx_new_thread_local_stream(dev);
-}
-
-extern "C" mlx_stream mlx_stream_from_thread_local_stream(
-    mlx_thread_local_stream stream) {
-  try {
-    return mlx_stream_new_(
-        mlx::core::stream_from_thread_local_stream(
-            mlx_thread_local_stream_get_(stream)));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return mlx_stream_new_();
-  }
-}
-
-extern "C" int mlx_stream_from_thread_local_stream_checked(
+extern "C" int mlx_thread_local_stream_resolve(
     mlx_stream* stream,
     const mlx_thread_local_stream* thread_local_stream) {
-  try {
-    mlx_stream_set_(
-        *stream,
-        mlx::core::stream_from_thread_local_stream(
-            mlx_thread_local_stream_get_(thread_local_stream)));
-  } catch (std::exception& e) {
-    mlx_stream_free_(*stream);
-    *stream = mlx_stream_new_();
-    mlx_error(e.what());
-    return 1;
-  }
-  return 0;
-}
-
-extern "C" int mlx_stream_from_thread_local(
-    mlx_stream* stream,
-    mlx_thread_local_stream thread_local_stream) {
   try {
     mlx_stream_set_(
         *stream,
@@ -178,17 +134,6 @@ extern "C" int mlx_synchronize_default(void) {
 }
 
 extern "C" int mlx_thread_local_stream_synchronize(
-    mlx_thread_local_stream stream) {
-  try {
-    mlx::core::synchronize(mlx_thread_local_stream_get_(stream));
-  } catch (std::exception& e) {
-    mlx_error(e.what());
-    return 1;
-  }
-  return 0;
-}
-
-extern "C" int mlx_thread_local_stream_synchronize_checked(
     const mlx_thread_local_stream* stream) {
   try {
     mlx::core::synchronize(mlx_thread_local_stream_get_(stream));
@@ -197,10 +142,6 @@ extern "C" int mlx_thread_local_stream_synchronize_checked(
     return 1;
   }
   return 0;
-}
-
-extern "C" int mlx_synchronize_thread_local(mlx_thread_local_stream stream) {
-  return mlx_thread_local_stream_synchronize(stream);
 }
 
 extern "C" int mlx_get_default_stream(mlx_stream* stream, mlx_device dev) {

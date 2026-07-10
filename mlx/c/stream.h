@@ -60,53 +60,18 @@ mlx_stream mlx_stream_new_device(mlx_device dev);
 mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev);
 
 /**
- * Returns a new thread-local stream token on a device.
- *
- * Resolve the token to a concrete stream for the current thread with
- * mlx_stream_from_thread_local_stream.
- */
-mlx_thread_local_stream mlx_new_thread_local_stream(mlx_device dev);
-
-/**
  * Write a new thread-local stream token for a device.
- *
- * This form avoids platform-specific aggregate calling conventions and is
- * preferred by foreign-function interfaces.
  */
-int mlx_new_thread_local_stream_checked(
+int mlx_thread_local_stream_new(
     mlx_thread_local_stream* stream,
     mlx_device dev);
 
 /**
- * Returns a new thread-local stream token on a device.
- *
- * Deprecated: use mlx_new_thread_local_stream.
+ * Resolve a thread-local stream token for the current thread.
  */
-mlx_thread_local_stream mlx_thread_local_stream_new_device(mlx_device dev);
-
-/**
- * Resolve a thread-local stream token to the stream for the current thread.
- */
-mlx_stream mlx_stream_from_thread_local_stream(mlx_thread_local_stream stream);
-
-/**
- * Resolve a thread-local stream token passed by pointer.
- *
- * This form avoids platform-specific aggregate calling conventions and is
- * preferred by foreign-function interfaces.
- */
-int mlx_stream_from_thread_local_stream_checked(
+int mlx_thread_local_stream_resolve(
     mlx_stream* stream,
     const mlx_thread_local_stream* thread_local_stream);
-
-/**
- * Resolve a thread-local stream token to the stream for the current thread.
- *
- * Deprecated: use mlx_stream_from_thread_local_stream.
- */
-int mlx_stream_from_thread_local(
-    mlx_stream* stream,
-    mlx_thread_local_stream thread_local_stream);
 
 /**
  * Set stream to provided src stream.
@@ -145,23 +110,7 @@ int mlx_synchronize_default(void);
 /**
  * Synchronize with the stream corresponding to the current thread.
  */
-int mlx_thread_local_stream_synchronize(mlx_thread_local_stream stream);
-
-/**
- * Synchronize with a thread-local stream token passed by pointer.
- *
- * This form avoids platform-specific aggregate calling conventions and is
- * preferred by foreign-function interfaces.
- */
-int mlx_thread_local_stream_synchronize_checked(
-    const mlx_thread_local_stream* stream);
-
-/**
- * Synchronize with the stream corresponding to the current thread.
- *
- * Deprecated: use mlx_thread_local_stream_synchronize.
- */
-int mlx_synchronize_thread_local(mlx_thread_local_stream stream);
+int mlx_thread_local_stream_synchronize(const mlx_thread_local_stream* stream);
 
 /**
  * Returns the default stream on the given device.
