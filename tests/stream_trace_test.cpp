@@ -93,15 +93,39 @@ bool parse_string_field(
   return true;
 }
 
+bool parse_optional_bool_field(
+    const std::string& line,
+    const char* key,
+    bool& value) {
+  const std::string token = std::string("\"") + key + "\":";
+  const size_t pos = line.find(token);
+  if (pos == std::string::npos) {
+    return false;
+  }
+  const size_t start = pos + token.size();
+  if (line.compare(start, 4, "true") == 0) {
+    value = true;
+    return true;
+  }
+  if (line.compare(start, 5, "false") == 0) {
+    value = false;
+    return true;
+  }
+  return false;
+}
+
 struct TraceRecord {
   uint64_t seq = 0;
   std::string run_id;
+  uint64_t run_id_len = 0;
   uint64_t c_handle_gen = 0;
   uint64_t native_desc_gen = 0;
   uint64_t array_data_ptr = 0;
   uint64_t array_wrapper_ptr = 0;
   uint64_t caller_pc = 0;
   std::string event;
+  bool truncated = false;
+  std::string overflow_event;
 };
 
 extern "C" uint64_t mlx_stream_trace_array_handle_generation(mlx_array arr);
@@ -124,14 +148,17 @@ std::vector<TraceRecord> parse_trace_file(const std::string& path) {
     TraceRecord r;
     if (!parse_string_field(line, "run_id", r.run_id) ||
         !parse_u64_dec_field(line, "seq", r.seq) ||
-        !parse_u64_dec_field(line, "c_handle_gen", r.c_handle_gen) ||
-        !parse_u64_dec_field(line, "native_desc_gen", r.native_desc_gen) ||
-        !parse_u64_hex_field(line, "array_data_ptr", r.array_data_ptr) ||
-        !parse_u64_hex_field(line, "array_wrapper_ptr", r.array_wrapper_ptr) ||
-        !parse_u64_hex_field(line, "caller_pc", r.caller_pc) ||
         !parse_string_field(line, "event", r.event)) {
       fail("trace file contains unparsable line");
     }
+    parse_u64_dec_field(line, "run_id_len", r.run_id_len);
+    parse_u64_dec_field(line, "c_handle_gen", r.c_handle_gen);
+    parse_u64_dec_field(line, "native_desc_gen", r.native_desc_gen);
+    parse_u64_hex_field(line, "array_data_ptr", r.array_data_ptr);
+    parse_u64_hex_field(line, "array_wrapper_ptr", r.array_wrapper_ptr);
+    parse_u64_hex_field(line, "caller_pc", r.caller_pc);
+    parse_string_field(line, "overflow_event", r.overflow_event);
+    parse_optional_bool_field(line, "truncated", r.truncated);
     out.push_back(r);
   }
   return out;
@@ -258,6 +285,145 @@ void run_concurrent_trace_process(const char* exe_path, const std::string& path)
   }
 }
 
+void run_transport_probe_mode() {
+  setenv(kTraceRunIdEnv, "stream-trace-probe", 1);
+
+  char path[256];
+  std::snprintf(path, sizeof(path), "/tmp/mlx-c-stream-trace-probe-%d.log", getpid());
+  std::remove(path);
+  setenv(kTraceEnv, path, 1);
+
+  auto records = parse_trace_file(path);
+  if (!records.empty()) {
+    fail("probe mode trace file should be empty");
+  }
+
+  mlx_array a = mlx_array_new_int(13);
+  mlx_array b = mlx_array_new();
+  if (mlx_array_set(&b, a)) {
+    fail("probe mode failed to copy array");
+  }
+  mlx_array_free(a);
+  mlx_array_free(b);
+
+  records = parse_trace_file(path);
+  if (records.empty()) {
+    fail("probe mode produced no records");
+  }
+
+  uint64_t probe_seq = records.front().seq;
+  if (records[0].event != "transport_probe") {
+    fail("first event was not transport_probe");
+  }
+  if (probe_seq != 1) {
+    fail("transport probe did not emit seq 1");
+  }
+
+  uint64_t previous_seq = 0;
+  size_t probe_count = 0;
+  bool saw_duplicate_probe_seq = false;
+  for (const auto& r : records) {
+    if (r.seq <= previous_seq) {
+      fail("trace sequence not strictly increasing");
+    }
+    if (r.seq == probe_seq) {
+      if (r.event == "transport_probe") {
+        ++probe_count;
+      } else {
+        saw_duplicate_probe_seq = true;
+      }
+    }
+    previous_seq = r.seq;
+  }
+  if (probe_count != 1) {
+    fail("transport probe not emitted exactly once");
+  }
+  if (saw_duplicate_probe_seq) {
+    fail("non-probe event reused probe sequence");
+  }
+}
+
+void run_transport_oversized_probe_mode() {
+  const size_t run_id_size = 5000;
+  const std::string oversized_run_id(run_id_size, 'y');
+  setenv(kTraceRunIdEnv, oversized_run_id.c_str(), 1);
+
+  char path[256];
+  std::snprintf(path, sizeof(path), "/tmp/mlx-c-stream-trace-oversized-probe-%d.log", getpid());
+  std::remove(path);
+  setenv(kTraceEnv, path, 1);
+
+  auto records = parse_trace_file(path);
+  if (!records.empty()) {
+    fail("oversized probe mode trace file should be empty");
+  }
+
+  mlx_array a = mlx_array_new_int(17);
+  mlx_array b = mlx_array_new();
+  if (mlx_array_set(&b, a)) {
+    fail("oversized probe mode failed to copy array");
+  }
+  mlx_array_free(a);
+  mlx_array_free(b);
+
+  records = parse_trace_file(path);
+  if (records.empty()) {
+    fail("oversized probe mode produced no records");
+  }
+
+  if (records[0].event != "transport_truncated") {
+    fail("oversized run id did not generate transport_truncated");
+  }
+  if (records[0].overflow_event != "transport_probe") {
+    fail("transport_truncated event did not identify probe overflow");
+  }
+  if (!records[0].truncated) {
+    fail("transport_truncated missing truncated=true");
+  }
+  if (records[0].run_id_len != oversized_run_id.size()) {
+    fail("transport_truncated did not preserve oversized run id length");
+  }
+  if (records[0].seq != 1) {
+    fail("oversized probe did not emit seq 1");
+  }
+}
+
+void run_transport_oversized_probe_process(const char* exe_path) {
+  pid_t pid = fork();
+  if (pid < 0) {
+    fail("unable to fork oversized probe worker");
+  }
+  if (pid == 0) {
+    execl(exe_path, exe_path, "--oversized-probe", nullptr);
+    std::_Exit(1);
+  }
+  int status = 0;
+  if (waitpid(pid, &status, 0) != pid) {
+    fail("failed to wait for oversized probe worker");
+  }
+  if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+    fail("oversized probe worker failed");
+  }
+}
+
+void run_transport_probe_process(const char* exe_path) {
+  pid_t pid = fork();
+  if (pid < 0) {
+    fail("unable to fork transport probe worker");
+  }
+  if (pid == 0) {
+    execl(exe_path, exe_path, "--probe", nullptr);
+    std::_Exit(1);
+  }
+  int status = 0;
+  if (waitpid(pid, &status, 0) != pid) {
+    fail("failed to wait for transport probe worker");
+  }
+  if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+    fail("transport probe worker failed");
+  }
+}
+
 void run_oversized_run_id_mode() {
   const size_t run_id_size = 2048;
   const std::string oversized_run_id(run_id_size, 'x');
@@ -285,10 +451,23 @@ void run_oversized_run_id_mode() {
   if (records.empty()) {
     fail("oversized run_id test produced no records");
   }
-  validate_records_common(records, oversized_run_id);
   for (const auto& r : records) {
+    if (r.seq == 0) {
+      fail("invalid sequence in oversized run_id mode");
+    }
+    if (r.seq == 1 && r.event != "transport_truncated" && r.event != "transport_probe") {
+      fail("first oversized event was not probe");
+    }
+  }
+  for (const auto& r : records) {
+    if (r.run_id_len != 0 && r.run_id_len != run_id_size) {
+      fail("oversized run_id length did not preserve exact size in overflow record");
+    }
+    if (r.event == "transport_truncated") {
+      continue;
+    }
     if (r.run_id != oversized_run_id) {
-      fail("oversized run_id test did not preserve exact run_id");
+      fail("oversized run_id test changed non-truncated run_id value");
     }
   }
 }
@@ -320,6 +499,14 @@ int main(int argc, char** argv) {
   }
   if (argc > 1 && std::strcmp(argv[1], "--oversized-run-id") == 0) {
     run_oversized_run_id_mode();
+    return 0;
+  }
+  if (argc > 1 && std::strcmp(argv[1], "--probe") == 0) {
+    run_transport_probe_mode();
+    return 0;
+  }
+  if (argc > 1 && std::strcmp(argv[1], "--oversized-probe") == 0) {
+    run_transport_oversized_probe_mode();
     return 0;
   }
 
@@ -492,6 +679,8 @@ int main(int argc, char** argv) {
         "descriptor-generation force path not observed; live/reuse scenario not induced\n");
   }
 
+  run_transport_probe_process(argv[0]);
+  run_transport_oversized_probe_process(argv[0]);
   run_oversized_run_id_process(argv[0]);
   run_concurrent_trace_process(argv[0], path);
   return 0;
