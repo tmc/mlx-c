@@ -1,21 +1,30 @@
 /* Copyright © 2023-2024 Apple Inc. */
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
-#include <algorithm>
 #include <sstream>
+#include <cstddef>
 #include <string>
+#include <sys/wait.h>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 #include <unistd.h>
+#include <vector>
 
 #include "mlx/c/array.h"
 #include "mlx/c/error.h"
 
 namespace {
+
+constexpr char kTraceEnv[] = "MLX_STREAM_TRACE";
+constexpr char kTraceRunIdEnv[] = "MLX_STREAM_TRACE_RUN_ID";
+constexpr int kConcurrentThreads = 4;
+constexpr int kConcurrentIterations = 32;
 
 void fail(const char* message) {
   std::cerr << message << '\n';
@@ -85,7 +94,8 @@ bool parse_string_field(
 }
 
 struct TraceRecord {
-  uint64_t run_id = 0;
+  uint64_t seq = 0;
+  std::string run_id;
   uint64_t c_handle_gen = 0;
   uint64_t native_desc_gen = 0;
   uint64_t array_data_ptr = 0;
@@ -112,7 +122,8 @@ std::vector<TraceRecord> parse_trace_file(const std::string& path) {
       fail("trace file contains non-json line");
     }
     TraceRecord r;
-    if (!parse_u64_dec_field(line, "run_id", r.run_id) ||
+    if (!parse_string_field(line, "run_id", r.run_id) ||
+        !parse_u64_dec_field(line, "seq", r.seq) ||
         !parse_u64_dec_field(line, "c_handle_gen", r.c_handle_gen) ||
         !parse_u64_dec_field(line, "native_desc_gen", r.native_desc_gen) ||
         !parse_u64_hex_field(line, "array_data_ptr", r.array_data_ptr) ||
@@ -128,7 +139,7 @@ std::vector<TraceRecord> parse_trace_file(const std::string& path) {
 
 void validate_records_common(
     const std::vector<TraceRecord>& records,
-    uint64_t expected_run_id) {
+    const std::string& expected_run_id) {
   for (const auto& r : records) {
     if (r.run_id != expected_run_id) {
       fail("trace run_id changed across records");
@@ -139,15 +150,185 @@ void validate_records_common(
   }
 }
 
+void run_concurrent_trace_worker() {
+  char path[256];
+  const char* trace_path = std::getenv(kTraceEnv);
+  if (trace_path == nullptr || trace_path[0] == '\0') {
+    fail("trace path missing in concurrent worker");
+  }
+  std::snprintf(path, sizeof(path), "%s", trace_path);
+  const auto base_records = parse_trace_file(path);
+
+  auto worker = []() {
+    for (int i = 0; i < kConcurrentIterations; ++i) {
+      mlx_array a = mlx_array_new_int(i);
+      mlx_array b = mlx_array_new();
+      if (mlx_array_set(&b, a)) {
+        fail("concurrent trace test failed to copy array");
+      }
+      mlx_array_free(a);
+      mlx_array_free(b);
+    }
+  };
+
+  std::vector<std::thread> threads;
+  threads.reserve(kConcurrentThreads);
+  for (int i = 0; i < kConcurrentThreads; ++i) {
+    threads.emplace_back(worker);
+  }
+  for (auto& t : threads) {
+    t.join();
+  }
+
+  auto assert_worker_records = [&](const std::vector<TraceRecord>& records) {
+    if (records.size() < static_cast<size_t>(
+            kConcurrentThreads * kConcurrentIterations * 2)) {
+      fail("concurrent trace test lost records");
+    }
+  };
+  auto records = parse_trace_file(path);
+  if (records.size() <= base_records.size()) {
+    fail("concurrent trace test produced no new records");
+  }
+
+  std::vector<TraceRecord> appended_records(
+      records.begin() + static_cast<long long>(base_records.size()), records.end());
+  assert_worker_records(appended_records);
+  const std::string expected_run_id =
+      std::getenv(kTraceRunIdEnv) == nullptr ? "" : std::getenv(kTraceRunIdEnv);
+  validate_records_common(appended_records, expected_run_id);
+
+  for (size_t i = 1; i < appended_records.size(); ++i) {
+    if (appended_records[i].seq <= appended_records[i - 1].seq) {
+      fail("trace sequence is not strictly increasing under concurrency");
+    }
+  }
+
+  uint64_t previous_seq = 0;
+  for (const auto& r : appended_records) {
+    if (r.seq == 0 || r.seq == previous_seq) {
+      fail("trace sequence value missing or duplicated");
+    }
+    previous_seq = r.seq;
+  }
+}
+
+void run_concurrent_trace_process(const char* exe_path, const std::string& path) {
+  const size_t pre_size = parse_trace_file(path).size();
+
+  pid_t pid = fork();
+  if (pid < 0) {
+    fail("unable to fork concurrent trace worker");
+  }
+  if (pid == 0) {
+    execl(exe_path, exe_path, "--concurrent", nullptr);
+    std::_Exit(1);
+  }
+
+  int status = 0;
+  if (waitpid(pid, &status, 0) != pid) {
+    fail("failed to wait for concurrent trace worker");
+  }
+  if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+    fail("concurrent trace worker failed");
+  }
+
+  auto all_records = parse_trace_file(path);
+  if (all_records.size() <= pre_size) {
+    fail("concurrent trace test lost records");
+  }
+  std::vector<TraceRecord> records(
+      all_records.begin() + pre_size, all_records.end());
+  const std::string expected_run_id =
+      std::getenv(kTraceRunIdEnv) == nullptr ? "" : std::getenv(kTraceRunIdEnv);
+  validate_records_common(records, expected_run_id);
+
+  for (size_t i = 1; i < records.size(); ++i) {
+    if (records[i].seq <= records[i - 1].seq) {
+      fail("trace sequence is not strictly increasing under concurrency");
+    }
+  }
+
+  uint64_t previous_seq = 0;
+  for (const auto& r : records) {
+    if (r.seq == 0 || r.seq == previous_seq) {
+      fail("trace sequence value missing or duplicated");
+    }
+    previous_seq = r.seq;
+  }
+}
+
+void run_oversized_run_id_mode() {
+  const size_t run_id_size = 2048;
+  const std::string oversized_run_id(run_id_size, 'x');
+  setenv(kTraceRunIdEnv, oversized_run_id.c_str(), 1);
+
+  char path[256];
+  std::snprintf(path, sizeof(path), "/tmp/mlx-c-stream-trace-oversized-%d.log", getpid());
+  std::remove(path);
+  setenv(kTraceEnv, path, 1);
+
+  auto records = parse_trace_file(path);
+  if (!records.empty()) {
+    fail("trace file should be empty before oversized run_id trace test");
+  }
+
+  mlx_array a = mlx_array_new_int(11);
+  mlx_array b = mlx_array_new();
+  if (mlx_array_set(&b, a)) {
+    fail("oversized run_id test failed to copy array");
+  }
+  mlx_array_free(a);
+  mlx_array_free(b);
+
+  records = parse_trace_file(path);
+  if (records.empty()) {
+    fail("oversized run_id test produced no records");
+  }
+  validate_records_common(records, oversized_run_id);
+  for (const auto& r : records) {
+    if (r.run_id != oversized_run_id) {
+      fail("oversized run_id test did not preserve exact run_id");
+    }
+  }
+}
+
+void run_oversized_run_id_process(const char* exe_path) {
+  pid_t pid = fork();
+  if (pid < 0) {
+    fail("unable to fork oversized run_id test");
+  }
+  if (pid == 0) {
+    execl(exe_path, exe_path, "--oversized-run-id", nullptr);
+    std::_Exit(1);
+  }
+  int status = 0;
+  if (waitpid(pid, &status, 0) != pid) {
+    fail("failed to wait for oversized run_id worker");
+  }
+  if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+    fail("oversized run_id worker failed");
+  }
+}
+
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  if (argc > 1 && std::strcmp(argv[1], "--concurrent") == 0) {
+    run_concurrent_trace_worker();
+    return 0;
+  }
+  if (argc > 1 && std::strcmp(argv[1], "--oversized-run-id") == 0) {
+    run_oversized_run_id_mode();
+    return 0;
+  }
+
   char path[256];
   std::snprintf(
       path, sizeof(path), "/tmp/mlx-c-stream-trace-%d.log", static_cast<int>(getpid()));
   std::remove(path);
-  setenv("MLX_STREAM_TRACE", path, 1);
-  setenv("MLX_STREAM_TRACE_RUN_ID", "123456", 1);
+  setenv(kTraceEnv, path, 1);
+  setenv(kTraceRunIdEnv, "stream-trace-run-1", 1);
 
   auto records = parse_trace_file(path);
   if (!records.empty()) {
@@ -184,9 +365,9 @@ int main() {
   if (records.empty()) {
     fail("trace output missing in trace build");
   }
-  validate_records_common(records, 123456);
+  validate_records_common(records, "stream-trace-run-1");
 
-  if (records.front().run_id != 123456) {
+  if (records.front().run_id != "stream-trace-run-1") {
     fail("trace run_id did not inherit MLX_STREAM_TRACE_RUN_ID");
   }
 
@@ -311,5 +492,7 @@ int main() {
         "descriptor-generation force path not observed; live/reuse scenario not induced\n");
   }
 
+  run_oversized_run_id_process(argv[0]);
+  run_concurrent_trace_process(argv[0], path);
   return 0;
 }
