@@ -1,7 +1,10 @@
 #include <cstdlib>
 #include <iostream>
+#include <mutex>
+#include <set>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "mlx/c/error.h"
 #include "mlx/c/stream.h"
@@ -9,9 +12,24 @@
 namespace {
 
 std::string last_error;
+std::mutex error_mutex;
+std::vector<std::string> errors;
 
 void record_error(const char* message, void*) {
+  std::lock_guard lock(error_mutex);
   last_error = message;
+  errors.emplace_back(message);
+}
+
+void clear_errors() {
+  std::lock_guard lock(error_mutex);
+  last_error.clear();
+  errors.clear();
+}
+
+bool has_error() {
+  std::lock_guard lock(error_mutex);
+  return !last_error.empty();
 }
 
 void fail(const char* message) {
@@ -30,17 +48,17 @@ void check_invalid(mlx_thread_local_stream token) {
   mlx_stream output = mlx_stream_new_device(cpu);
   check(output.ctx != nullptr, "failed to create initial resolver output");
 
-  last_error.clear();
+  clear_errors();
   check(
       mlx_thread_local_stream_resolve(&output, &token) != 0,
       "resolver accepted an invalid token");
   check(output.ctx == nullptr, "resolver retained a valid output");
-  check(!last_error.empty(), "resolver did not report an error");
-  last_error.clear();
+  check(has_error(), "resolver did not report an error");
+  clear_errors();
   check(
       mlx_thread_local_stream_synchronize(&token) != 0,
       "synchronize accepted an invalid token");
-  check(!last_error.empty(), "synchronize did not report an error");
+  check(has_error(), "synchronize did not report an error");
   mlx_device_free(cpu);
 }
 
@@ -102,13 +120,13 @@ int main() {
       mlx_thread_local_stream_synchronize(&token) == 0,
       "synchronize rejected a valid token");
 
-  last_error.clear();
+  clear_errors();
   mlx_stream checked = mlx_stream_new();
   check(
       mlx_thread_local_stream_resolve(&checked, nullptr) != 0,
       "resolver accepted a null token");
   check(checked.ctx == nullptr, "null token produced a stream");
-  check(!last_error.empty(), "null token did not report an error");
+  check(has_error(), "null token did not report an error");
 
   mlx_stream second = mlx_stream_new();
   check(
@@ -146,6 +164,37 @@ int main() {
       "thread resolution failed");
   check(
       thread_indices[0] != thread_indices[1], "cross-thread indices are equal");
+
+  clear_errors();
+  const mlx_thread_local_stream invalid_tokens[] = {
+      {-1, MLX_CPU, 0},
+      {-2, MLX_CPU, 0},
+      {0, static_cast<mlx_device_type>(-1), 0},
+      {0, static_cast<mlx_device_type>(99), 0},
+      {0, MLX_CPU, -1},
+      {0, MLX_CPU, cpu_count},
+      {0, MLX_GPU, -1},
+      {0, MLX_GPU, gpu_count},
+  };
+  std::thread error_threads[8];
+  for (int i = 0; i < 8; ++i) {
+    error_threads[i] = std::thread([&, i] {
+      mlx_stream output = mlx_stream_new();
+      check(
+          mlx_thread_local_stream_resolve(&output, &invalid_tokens[i]) != 0,
+          "concurrent resolver accepted an invalid token");
+      check(output.ctx == nullptr, "concurrent resolver retained output");
+    });
+  }
+  for (auto& thread : error_threads) {
+    thread.join();
+  }
+  {
+    std::lock_guard lock(error_mutex);
+    check(errors.size() == 8, "concurrent errors were lost");
+    std::set<std::string> distinct(errors.begin(), errors.end());
+    check(distinct.size() >= 4, "concurrent errors were not distinguishable");
+  }
 
   mlx_device_free(cpu);
   mlx_set_error_handler(nullptr, nullptr, nullptr);
