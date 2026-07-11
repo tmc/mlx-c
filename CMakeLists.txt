@@ -19,6 +19,7 @@ option(BUILD_SHARED_LIBS "Build mlx C as a shared library" OFF)
 option(MLX_C_BUILD_EXAMPLES "Build examples for mlx C" ON)
 option(MLX_C_BUILD_JACCL "Build the standalone JACCL C API when available" ON)
 option(MLX_C_USE_SYSTEM_MLX "Use system MLX" OFF)
+option(MLX_STREAM_TRACE_BUILD "Build stream trace instrumentation in mlx-c" OFF)
 set(MLX_C_COMPILER_LAUNCHER
     "auto"
     CACHE STRING
@@ -126,9 +127,19 @@ set(mlxc-src
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/vector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/version.cpp)
 
+if(MLX_STREAM_TRACE_BUILD)
+  list(APPEND mlxc-src ${CMAKE_CURRENT_LIST_DIR}/mlx/c/stream_debug_trace.cpp)
+endif()
+
 add_library(mlxc ${mlxc-src})
 
 target_link_libraries(mlxc PRIVATE mlx)
+if(MLX_STREAM_TRACE_BUILD)
+  if(TARGET mlx)
+    target_compile_definitions(mlx PRIVATE MLX_STREAM_TRACE_BUILD)
+  endif()
+  target_compile_definitions(mlxc PRIVATE MLX_STREAM_TRACE_BUILD)
+endif()
 set_property(TARGET mlxc PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 set(MLX_C_INSTALL_TARGETS mlxc)
