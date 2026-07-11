@@ -1,14 +1,17 @@
 /* Copyright © 2023-2024 Apple Inc. */
 
 #include <algorithm>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <cstddef>
 #include <string>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unordered_map>
@@ -22,6 +25,7 @@
 namespace {
 
 constexpr char kTraceEnv[] = "MLX_STREAM_TRACE";
+constexpr char kTraceFileEnv[] = "MLX_STREAM_TRACE_FILE";
 constexpr char kTraceRunIdEnv[] = "MLX_STREAM_TRACE_RUN_ID";
 constexpr int kConcurrentThreads = 4;
 constexpr int kConcurrentIterations = 32;
@@ -173,6 +177,192 @@ void validate_records_common(
     }
     if (r.event.empty()) {
       fail("trace record missing event");
+    }
+  }
+}
+
+void emit_trace_operation() {
+  mlx_array a = mlx_array_new_int(23);
+  mlx_array b = mlx_array_new();
+  if (mlx_array_set(&b, a)) {
+    fail("path-security trace operation failed");
+  }
+  mlx_array_free(a);
+  mlx_array_free(b);
+}
+
+std::string direct_trace_path(const char* root, const char* kind) {
+  std::ostringstream path;
+  path << root << "/mlx-c-stream-trace-" << kind << "-" << getpid();
+  return path.str();
+}
+
+void create_empty_file(const std::string& path) {
+  const int fd = ::open(path.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
+  if (fd < 0 || ::close(fd) != 0) {
+    fail("unable to create path-security file");
+  }
+}
+
+off_t file_size(const std::string& path) {
+  struct stat status {};
+  if (::stat(path.c_str(), &status) != 0) {
+    fail("unable to stat path-security file");
+  }
+  return status.st_size;
+}
+
+void run_path_security_mode(const char* kind) {
+  setenv(kTraceEnv, "1", 1);
+  setenv(kTraceRunIdEnv, "stream-trace-path-security", 1);
+
+  std::string path;
+  std::string target;
+  std::string directory;
+  int held_fd = -1;
+  bool expect_trace = false;
+
+  if (std::strcmp(kind, "tmp") == 0) {
+    path = direct_trace_path("/tmp", kind);
+    std::remove(path.c_str());
+    create_empty_file(path);
+    expect_trace = true;
+  } else if (std::strcmp(kind, "private-tmp") == 0) {
+    path = direct_trace_path("/private/tmp", kind);
+    std::remove(path.c_str());
+    create_empty_file(path);
+    expect_trace = true;
+  } else if (std::strcmp(kind, "traversal") == 0) {
+    target = direct_trace_path("/tmp", kind);
+    std::remove(target.c_str());
+    create_empty_file(target);
+    const auto name = target.substr(target.find_last_of('/') + 1);
+    path = "/private/tmp/../tmp/" + name;
+  } else if (std::strcmp(kind, "nested") == 0) {
+    char dir[] = "/tmp/mlx-c-stream-trace-nested-XXXXXX";
+    if (::mkdtemp(dir) == nullptr) {
+      fail("unable to create nested path directory");
+    }
+    directory = dir;
+    path = directory + "/trace.jsonl";
+  } else if (std::strcmp(kind, "dot") == 0) {
+    path = "/tmp/.";
+  } else if (std::strcmp(kind, "parent") == 0) {
+    path = "/private/tmp/..";
+  } else if (std::strcmp(kind, "relative") == 0) {
+    path = direct_trace_path(".", kind);
+    std::remove(path.c_str());
+  } else if (std::strcmp(kind, "other-root") == 0) {
+    path = direct_trace_path("/var/tmp", kind);
+    std::remove(path.c_str());
+  } else if (std::strcmp(kind, "symlink") == 0) {
+    target = direct_trace_path("/tmp", "symlink-target");
+    path = direct_trace_path("/tmp", kind);
+    std::remove(target.c_str());
+    std::remove(path.c_str());
+    create_empty_file(target);
+    if (::symlink(target.c_str(), path.c_str()) != 0) {
+      fail("unable to create path-security symlink");
+    }
+  } else if (std::strcmp(kind, "directory") == 0) {
+    char dir[] = "/tmp/mlx-c-stream-trace-directory-XXXXXX";
+    if (::mkdtemp(dir) == nullptr) {
+      fail("unable to create path-security directory");
+    }
+    path = dir;
+  } else if (std::strcmp(kind, "fifo") == 0) {
+    path = direct_trace_path("/tmp", kind);
+    std::remove(path.c_str());
+    if (::mkfifo(path.c_str(), 0600) != 0) {
+      fail("unable to create path-security fifo");
+    }
+    held_fd = ::open(path.c_str(), O_RDONLY | O_NONBLOCK);
+    if (held_fd < 0) {
+      fail("unable to open path-security fifo reader");
+    }
+  } else if (std::strcmp(kind, "hardlink") == 0) {
+    target = direct_trace_path("/tmp", "hardlink-target");
+    path = direct_trace_path("/tmp", kind);
+    std::remove(target.c_str());
+    std::remove(path.c_str());
+    create_empty_file(target);
+    if (::link(target.c_str(), path.c_str()) != 0) {
+      if (errno == EPERM || errno == ENOTSUP) {
+        std::remove(target.c_str());
+        return;
+      }
+      fail("unable to create path-security hardlink");
+    }
+  } else {
+    fail("unknown path-security case");
+  }
+
+  setenv(kTraceFileEnv, path.c_str(), 1);
+  emit_trace_operation();
+
+  if (expect_trace) {
+    if (file_size(path) == 0) {
+      fail("valid direct trace path produced no output");
+    }
+  } else if (!target.empty()) {
+    if (file_size(target) != 0) {
+      fail("unsafe trace path modified target");
+    }
+  } else if (std::strcmp(kind, "nested") == 0 ||
+             std::strcmp(kind, "relative") == 0 ||
+             std::strcmp(kind, "other-root") == 0) {
+    if (::access(path.c_str(), F_OK) == 0) {
+      fail("unsafe trace path created output");
+    }
+  }
+
+  if (held_fd >= 0) {
+    ::close(held_fd);
+  }
+  if (!path.empty() && std::strcmp(kind, "dot") != 0 &&
+      std::strcmp(kind, "parent") != 0 &&
+      std::strcmp(kind, "directory") != 0) {
+    std::remove(path.c_str());
+  }
+  if (!target.empty()) {
+    std::remove(target.c_str());
+  }
+  if (!directory.empty()) {
+    ::rmdir(directory.c_str());
+  }
+  if (std::strcmp(kind, "directory") == 0) {
+    ::rmdir(path.c_str());
+  }
+}
+
+void run_path_security_processes(const char* exe_path) {
+  const char* cases[] = {
+      "tmp",
+      "private-tmp",
+      "traversal",
+      "nested",
+      "dot",
+      "parent",
+      "relative",
+      "other-root",
+      "symlink",
+      "directory",
+      "fifo",
+      "hardlink",
+  };
+  for (const char* path_case : cases) {
+    const pid_t pid = fork();
+    if (pid < 0) {
+      fail("unable to fork path-security worker");
+    }
+    if (pid == 0) {
+      execl(exe_path, exe_path, "--path-security", path_case, nullptr);
+      std::_Exit(1);
+    }
+    int status = 0;
+    if (waitpid(pid, &status, 0) != pid || !WIFEXITED(status) ||
+        WEXITSTATUS(status) != 0) {
+      fail("path-security worker failed");
     }
   }
 }
@@ -493,6 +683,10 @@ void run_oversized_run_id_process(const char* exe_path) {
 }  // namespace
 
 int main(int argc, char** argv) {
+  if (argc > 2 && std::strcmp(argv[1], "--path-security") == 0) {
+    run_path_security_mode(argv[2]);
+    return 0;
+  }
   if (argc > 1 && std::strcmp(argv[1], "--concurrent") == 0) {
     run_concurrent_trace_worker();
     return 0;
@@ -683,5 +877,6 @@ int main(int argc, char** argv) {
   run_transport_oversized_probe_process(argv[0]);
   run_oversized_run_id_process(argv[0]);
   run_concurrent_trace_process(argv[0], path);
+  run_path_security_processes(argv[0]);
   return 0;
 }

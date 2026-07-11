@@ -16,6 +16,7 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <sys/stat.h>
 #include <thread>
 #include <unordered_map>
 #include <unistd.h>
@@ -142,20 +143,40 @@ void DisableTracingAfterFailure(const char* reason, uint64_t seq) {
   EmitTraceTransportFailure(reason, seq);
 }
 
-bool IsLocalTraceFile(const char* path) {
+bool IsDirectTmpChild(const char* path) {
   if (path == nullptr || path[0] == '\0') {
     return false;
   }
 
-  return std::strncmp(path, "/tmp/", 5) == 0 ||
-      std::strncmp(path, "/private/tmp/", 13) == 0;
+  const char* name = nullptr;
+  if (std::strncmp(path, "/tmp/", 5) == 0) {
+    name = path + 5;
+  } else if (std::strncmp(path, "/private/tmp/", 13) == 0) {
+    name = path + 13;
+  }
+  return name != nullptr && name[0] != '\0' &&
+      std::strcmp(name, ".") != 0 && std::strcmp(name, "..") != 0 &&
+      std::strchr(name, '/') == nullptr;
 }
 
 int OpenTraceFile(const char* path) {
-  int fd = ::open(path, O_CREAT | O_WRONLY | O_APPEND | O_CLOEXEC, 0600);
+  int fd = ::open(
+      path,
+      O_CREAT | O_WRONLY | O_APPEND | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK,
+      0600);
   if (fd < 0) {
     std::ostringstream msg;
     msg << "MLX_STREAM_TRACE_FILE open failed: " << path << "\n";
+    EmitTraceDiagnostic(msg.str());
+    return -1;
+  }
+
+  struct stat status {};
+  if (::fstat(fd, &status) != 0 || !S_ISREG(status.st_mode) ||
+      status.st_nlink != 1) {
+    ::close(fd);
+    std::ostringstream msg;
+    msg << "MLX_STREAM_TRACE_FILE rejected: " << path << "\n";
     EmitTraceDiagnostic(msg.str());
     return -1;
   }
@@ -170,8 +191,9 @@ int ResolveTraceFD() {
 
   const char* trace_file = std::getenv(kTraceFileEnv);
   if (trace_file != nullptr && trace_file[0] != '\0') {
-    if (!IsLocalTraceFile(trace_file)) {
-      EmitTraceDiagnostic("MLX_STREAM_TRACE_FILE must be under /tmp\n");
+    if (!IsDirectTmpChild(trace_file)) {
+      EmitTraceDiagnostic(
+          "MLX_STREAM_TRACE_FILE must be a direct child of /tmp\n");
       return -1;
     }
     const int fd = OpenTraceFile(trace_file);
@@ -182,8 +204,8 @@ int ResolveTraceFD() {
     return STDERR_FILENO;
   }
 
-  if (!IsLocalTraceFile(trace_env)) {
-    EmitTraceDiagnostic("MLX_STREAM_TRACE path must be under /tmp\n");
+  if (!IsDirectTmpChild(trace_env)) {
+    EmitTraceDiagnostic("MLX_STREAM_TRACE path must be a direct child of /tmp\n");
     return -1;
   }
 
