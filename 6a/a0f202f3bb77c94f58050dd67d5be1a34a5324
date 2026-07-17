@@ -1,0 +1,1 @@
+committed 2026-07-17 by Claude Code (Fable 5, claude-opus-4-8 session) via manual git commit (git-auto-commit-message --auto failed: anthropic API credit balance too low). tty=not a tty pid=87846 ITERM_SESSION_ID=w0t19p14:0B87677E-2D09-4F62-AF1B-8B82944A30DE. Fix: PortReportFromAttr removed from tmc/apple rdma; read IbvPortAttr.LID/ActiveMTU directly.
