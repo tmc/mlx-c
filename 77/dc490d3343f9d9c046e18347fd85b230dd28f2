@@ -1,0 +1,9 @@
+commit: 77dc490
+date: 2026-07-16
+agent: claude-code
+model: claude-opus-4-8
+tty: not a tty
+not a tty
+pid: 34264
+ITERM_SESSION_ID: w2t10p1:67B5C4E6-6882-4748-88D7-1946195CC437
+note: cherry-pick of in-repo mlx-c-gen 35d0e09 onto gen/main during in-repo branch triage
