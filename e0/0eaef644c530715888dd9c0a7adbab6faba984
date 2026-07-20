@@ -1,1 +1,7 @@
-committed 2026-07-17 by Claude Code (Fable 5, claude-opus-4-8 session) via manual git commit (git-auto-commit-message --auto failed: anthropic API credit balance too low). tty=not a tty pid=87846 ITERM_SESSION_ID=w0t19p14:0B87677E-2D09-4F62-AF1B-8B82944A30DE. Fix: PortReportFromAttr removed from tmc/apple rdma; read IbvPortAttr.LID/ActiveMTU directly.
+commit: e00eaef644c530715888dd9c0a7adbab6faba984
+date: 2026-07-19T20:25:08-07:00
+codex_version: codex-cli 0.144.6
+model: GPT-5
+tty: not a tty
+pid: 51641
+ITERM_SESSION_ID: w0t0p12:D18D23BA-3FB8-40B3-878F-9385E57C84CC
