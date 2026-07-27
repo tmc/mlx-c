@@ -2,7 +2,6 @@ commit: ead302f712c0d4133fe9f8ffa857e7f3f1f2f2ef
 date: 2026-07-26T20:16:35-07:00
 claude-code: 2.1.220 (Claude Code)
 model: claude-opus-5[1m]
-tty: not a tty
-not a tty
-pid: 95302
+tty: ??
+pid: 96150
 iterm-session: unset
