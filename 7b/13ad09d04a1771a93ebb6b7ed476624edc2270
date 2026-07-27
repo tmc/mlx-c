@@ -1,0 +1,8 @@
+sha: 7b13ad09d04a1771a93ebb6b7ed476624edc2270
+date: 2026-07-27T22:49:43Z
+agent: claude-code, model claude-opus-5[1m]
+tty: not a tty
+none
+pid: 37320
+ITERM_SESSION_ID: unset
+gate: jaccl handoff Gate 5 (direct reduce-scatter + all-gather on the complete graph)
