@@ -1,0 +1,9 @@
+commit: 40819fa
+date: 2026-07-27T23:34:58Z
+claude-code: 2.1.220 (Claude Code)
+model: claude-opus-5[1m]
+tty: not a tty
+none
+pid: 98364
+ITERM_SESSION_ID: none (background job 12441717)
+origin: adversarial verification pass of workflow wf_bcf14b33-642 found the escape; Gate 5 had reported the cost as structural
