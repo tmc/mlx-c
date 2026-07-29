@@ -1,0 +1,1 @@
+swept the package for unenforced measurement comments; 14->10 confirmed stale via rebuild at 164285a, meshreduce 16.40/20.30 reproduce exactly. claude-code 2.1.220 (Claude Code) model=claude-opus-5[1m] tty=not a tty pid=23123 iterm=w2t0p18:EB5FB56F-DB76-4AC2-A24F-139F1215357E
