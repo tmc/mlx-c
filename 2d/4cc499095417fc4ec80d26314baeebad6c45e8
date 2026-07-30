@@ -1,0 +1,1 @@
+origin=2D101DFF purego ABI guard, found by 46ACA121 in review of the go.mod repoint. 2D101DFF authoring. Red on this branch since 8292400, predating e479d69; the 15-arg syscall check was verified PASS under alpha.8 via go test -overlay before the constant moved. Whole module green after: 25 ok, 6 no-test, 0 FAIL. date=2026-07-30T23:40:29Z model=claude-opus-5[1m] session=2D101DFF
