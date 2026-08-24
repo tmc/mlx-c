@@ -76,7 +76,9 @@ else()
       GIT_TAG v0.32.0
       PATCH_COMMAND
         ${CMAKE_COMMAND} -DMLX_SOURCE_DIR=<SOURCE_DIR> -P
-        ${CMAKE_CURRENT_LIST_DIR}/cmake/export-mlx-event.cmake)
+        ${CMAKE_CURRENT_LIST_DIR}/cmake/export-mlx-event.cmake
+        ${CMAKE_COMMAND} -DMLX_SOURCE_DIR=<SOURCE_DIR> -P
+        ${CMAKE_CURRENT_LIST_DIR}/cmake/fix-stream-ordering.cmake)
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
     list(APPEND MLX_C_FETCH_MLX_ARGS EXCLUDE_FROM_ALL)
     FetchContent_Declare(
