@@ -82,3 +82,8 @@ generated_support mlxc mlx/c/vector.h
 generated_support mlxc mlx/c/vector.cpp
 custom_spec_generated mlxc mlx/c/version.h
 handwritten_runtime mlxc mlx/c/version.cpp
+handwritten_runtime mlxc mlx/c/event.h
+handwritten_runtime mlxc mlx/c/event.cpp
+handwritten_runtime mlxc mlx/c/stream_debug_trace.cpp
+handwritten_runtime mlxc mlx/c/private/event.h
+handwritten_runtime mlxc mlx/c/private/stream_debug_trace.h
