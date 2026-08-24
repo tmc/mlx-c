@@ -170,3 +170,17 @@ func TestParamType(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeDeclPointerStarPlacement(t *testing.T) {
+	cases := []struct{ a, b string }{
+		{"mlx_array* res", "mlx_array *res"},
+		{"const int* axes", "const int * axes"},
+		{"char** res", "char **res"},
+		{"int mlx_sum(mlx_array* res, bool keepdims)", "int mlx_sum(mlx_array *res, bool keepdims)"},
+	}
+	for _, tc := range cases {
+		if normalizeDecl(tc.a) != normalizeDecl(tc.b) {
+			t.Errorf("normalizeDecl(%q)=%q != normalizeDecl(%q)=%q", tc.a, normalizeDecl(tc.a), tc.b, normalizeDecl(tc.b))
+		}
+	}
+}

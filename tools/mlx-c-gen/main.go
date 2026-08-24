@@ -148,6 +148,9 @@ func runGenerate(args []string) error {
 	if err != nil {
 		return err
 	}
+	if _, err := os.Stat(mlxSrcPath); err != nil {
+		return fmt.Errorf("MLX source %s: %w", mlxSrcPath, err)
+	}
 	compileCommands, err := deriveCompileCommands(mlxSrcPath, *compileCommandsPath)
 	if err != nil {
 		return err
@@ -180,10 +183,13 @@ func runGenerate(args []string) error {
 	}
 	headerMappings := manifest.Headers
 	standaloneNames := manifest.Standalone
-	allSpecs, err := customspec.LoadDir(customDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+	var allSpecs []customspec.Spec
+	if _, err := os.Stat(customDir); err == nil {
+		allSpecs, err = customspec.LoadDir(customDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+			os.Exit(1)
+		}
 	}
 	customSpecs := customspecsForRun(allSpecs, *jaccl)
 
@@ -195,6 +201,14 @@ func runGenerate(args []string) error {
 	}
 
 	success := true
+	var genErrs []string
+	var reportErr func(format string, args ...any)
+	reportErr = func(format string, args ...any) {
+		msg := fmt.Sprintf(format, args...)
+		fmt.Println("  ERROR: " + msg)
+		genErrs = append(genErrs, msg)
+		success = false
+	}
 
 	// Generate header-based bindings
 	fmt.Println("Generating header-based bindings...")
@@ -232,7 +246,7 @@ func runGenerate(args []string) error {
 		for _, h := range hm.Headers {
 			fullPath := filepath.Join(mlxSrcPath, h)
 			if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-				fmt.Printf("  ERROR: Header not found: %s\n", fullPath)
+				reportErr("header not found: %s", fullPath)
 				allExist = false
 				break
 			}
@@ -249,7 +263,7 @@ func runGenerate(args []string) error {
 		// Parse headers
 		result, err := parser.ParseFiles(fullPaths)
 		if err != nil {
-			fmt.Printf("  ERROR parsing %s: %v\n", hm.Name, err)
+			reportErr("parsing %s: %v", hm.Name, err)
 			success = false
 			continue
 		}
@@ -275,13 +289,13 @@ func runGenerate(args []string) error {
 		fmt.Printf("  Generating %s.h...\n", hm.Name)
 		var hBuf bytes.Buffer
 		if err := gen.Generate(&hBuf, result, hm.Name, fullPaths, false, hm.Docstring); err != nil {
-			fmt.Printf("    ERROR: %v\n", err)
+			reportErr("%v", err)
 			success = false
 			continue
 		}
 		hPath := filepath.Join(outDir, hm.Name+".h")
 		if err := os.WriteFile(hPath, hBuf.Bytes(), 0644); err != nil {
-			fmt.Printf("    ERROR writing %s: %v\n", hPath, err)
+			reportErr("writing %s: %v", hPath, err)
 			success = false
 			continue
 		}
@@ -290,13 +304,13 @@ func runGenerate(args []string) error {
 		fmt.Printf("  Generating %s.cpp...\n", hm.Name)
 		var cppBuf bytes.Buffer
 		if err := gen.Generate(&cppBuf, result, hm.Name, fullPaths, true, hm.Docstring); err != nil {
-			fmt.Printf("    ERROR: %v\n", err)
+			reportErr("%v", err)
 			success = false
 			continue
 		}
 		cppPath := filepath.Join(outDir, hm.Name+".cpp")
 		if err := os.WriteFile(cppPath, cppBuf.Bytes(), 0644); err != nil {
-			fmt.Printf("    ERROR writing %s: %v\n", cppPath, err)
+			reportErr("writing %s: %v", cppPath, err)
 			success = false
 			continue
 		}
@@ -309,13 +323,13 @@ func runGenerate(args []string) error {
 		fmt.Printf("Generating type policy to %s...\n", *typesOut)
 		f, err := os.Create(*typesOut)
 		if err != nil {
-			fmt.Printf("  ERROR creating metadata file: %v\n", err)
+			reportErr("creating metadata file: %v", err)
 			success = false
 		} else {
 			defer f.Close()
 			yg := generators.NewYaml()
 			if err := yg.GenerateYamlWithTypePolicyIR(f, combinedResult, combinedIR, typePolicyIR); err != nil {
-				fmt.Printf("  ERROR generating metadata: %v\n", err)
+				reportErr("generating metadata: %v", err)
 				success = false
 			}
 		}
@@ -326,7 +340,7 @@ func runGenerate(args []string) error {
 	for _, name := range standaloneNames {
 		generate := standaloneGenerators[name]
 		if generate == nil {
-			fmt.Printf("  ERROR: no standalone generator for %s\n", name)
+			reportErr("no standalone generator for %s", name)
 			success = false
 			continue
 		}
@@ -340,7 +354,7 @@ func runGenerate(args []string) error {
 		hContent := generate("header")
 		hPath := filepath.Join(outDir, name+".h")
 		if err := os.WriteFile(hPath, []byte(hContent), 0644); err != nil {
-			fmt.Printf("    ERROR writing %s: %v\n", hPath, err)
+			reportErr("writing %s: %v", hPath, err)
 			success = false
 			continue
 		}
@@ -350,7 +364,7 @@ func runGenerate(args []string) error {
 		cppContent := generate("impl")
 		cppPath := filepath.Join(outDir, name+".cpp")
 		if err := os.WriteFile(cppPath, []byte(cppContent), 0644); err != nil {
-			fmt.Printf("    ERROR writing %s: %v\n", cppPath, err)
+			reportErr("writing %s: %v", cppPath, err)
 			success = false
 			continue
 		}
@@ -360,7 +374,7 @@ func runGenerate(args []string) error {
 		privContent := generate("private")
 		privPath := filepath.Join(privateDir, name+".h")
 		if err := os.WriteFile(privPath, []byte(privContent), 0644); err != nil {
-			fmt.Printf("    ERROR writing %s: %v\n", privPath, err)
+			reportErr("writing %s: %v", privPath, err)
 			success = false
 			continue
 		}
@@ -376,7 +390,7 @@ func runGenerate(args []string) error {
 			}
 			outPath, err := customHeaderOutputPath(outDir, spec.Header)
 			if err != nil {
-				fmt.Printf("  ERROR: %v\n", err)
+				reportErr("%v", err)
 				success = false
 				continue
 			}
@@ -387,17 +401,17 @@ func runGenerate(args []string) error {
 			fmt.Printf("  Generating %s...\n", spec.Header)
 			data, err := customspec.RenderHeader(spec)
 			if err != nil {
-				fmt.Printf("    ERROR: %v\n", err)
+				reportErr("%v", err)
 				success = false
 				continue
 			}
 			if err := os.MkdirAll(filepath.Dir(outPath), 0o777); err != nil {
-				fmt.Printf("    ERROR creating %s: %v\n", filepath.Dir(outPath), err)
+				reportErr("creating %s: %v", filepath.Dir(outPath), err)
 				success = false
 				continue
 			}
 			if err := os.WriteFile(outPath, data, 0644); err != nil {
-				fmt.Printf("    ERROR writing %s: %v\n", outPath, err)
+				reportErr("writing %s: %v", outPath, err)
 				success = false
 				continue
 			}
@@ -444,7 +458,13 @@ func runGenerate(args []string) error {
 				assumedPath = filepath.Join("mlx", "c", "private", base)
 			}
 
-			formatted, err := formatContent(content, assumedPath, resolvedFormatCacheDir)
+			stylePath, styleErr := clangFormatStylePath(root)
+			if styleErr != nil {
+				fmt.Printf("  WARNING: %v\n", styleErr)
+				success = false
+				continue
+			}
+			formatted, err := formatContent(content, assumedPath, resolvedFormatCacheDir, stylePath)
 			if err != nil {
 				fmt.Printf("  WARNING: clang-format failed for %s: %v\n", f, err)
 				continue
@@ -476,19 +496,23 @@ func runGenerate(args []string) error {
 		})
 		data, err := json.MarshalIndent(report, "", "  ")
 		if err != nil {
-			fmt.Printf("  ERROR marshaling report: %v\n", err)
+			reportErr("marshaling report: %v", err)
 			success = false
 		} else if err := writeCheckReport(*reportPath, append(data, '\n')); err != nil {
-			fmt.Printf("  ERROR writing report: %v\n", err)
+			reportErr("writing report: %v", err)
 			success = false
 		}
 	}
 
-	if success {
-		fmt.Println("Done!")
-		return nil
+	if !success {
+		fmt.Fprintf(os.Stderr, "\n%d error(s):\n", len(genErrs))
+		for _, e := range genErrs {
+			fmt.Fprintf(os.Stderr, "  - %s\n", e)
+		}
+		return fmt.Errorf("completed with %d error(s)", len(genErrs))
 	}
-	return fmt.Errorf("completed with errors")
+	fmt.Println("Done!")
+	return nil
 }
 
 type generateReport struct {
@@ -673,7 +697,16 @@ var clangFormatVersionCache struct {
 	err     error
 }
 
-func formatContent(content []byte, assumedPath, cacheDir string) ([]byte, error) {
+// clangFormatStylePath resolves the committed .clang-format for a tree root.
+func clangFormatStylePath(root string) (string, error) {
+	p := filepath.Join(root, ".clang-format")
+	if _, err := os.Stat(p); err != nil {
+		return "", fmt.Errorf("no .clang-format at %s: formatting would fall back to LLVM defaults and break upstream parity", p)
+	}
+	return p, nil
+}
+
+func formatContent(content []byte, assumedPath, cacheDir, stylePath string) ([]byte, error) {
 	key := ""
 	if cacheDir != "" {
 		var err error
@@ -688,7 +721,7 @@ func formatContent(content []byte, assumedPath, cacheDir string) ([]byte, error)
 		}
 	}
 
-	formatted, err := runClangFormat(content, assumedPath)
+	formatted, err := runClangFormat(content, assumedPath, stylePath)
 	if err != nil {
 		return nil, err
 	}
@@ -700,8 +733,14 @@ func formatContent(content []byte, assumedPath, cacheDir string) ([]byte, error)
 	return formatted, nil
 }
 
-func runClangFormat(content []byte, assumedPath string) ([]byte, error) {
-	cmd := exec.Command("clang-format", "--assume-filename="+assumedPath)
+// runClangFormat formats content using the tree's committed .clang-format.
+// The style path is pinned absolutely: without it clang-format searches from
+// the assumed filename under the current directory and silently falls back to
+// LLVM defaults (PointerAlignment: Right) in trees that lack the config,
+// which reformats every pointer declaration and breaks upstream parity.
+func runClangFormat(content []byte, assumedPath, stylePath string) ([]byte, error) {
+	style := "file:" + stylePath
+	cmd := exec.Command("clang-format", "--assume-filename="+assumedPath, "--style="+style)
 	cmd.Stdin = bytes.NewReader(content)
 	var formatted bytes.Buffer
 	cmd.Stdout = &formatted
@@ -2445,7 +2484,11 @@ func checkCustomSpecs(opts checkOptions, lock *apilock.Lock) error {
 		if err != nil {
 			return err
 		}
-		data, err = formatContent(data, spec.Header, opts.Options.FormatCacheDir)
+		stylePath, styleErr := clangFormatStylePath(opts.Options.RepoRoot)
+		if styleErr != nil {
+			return styleErr
+		}
+		data, err = formatContent(data, spec.Header, opts.Options.FormatCacheDir, stylePath)
 		if err != nil {
 			return fmt.Errorf("format custom header %s: %w", spec.Header, err)
 		}

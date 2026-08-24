@@ -156,13 +156,7 @@ extern "C" int mlx_node_namer_get_name(
     mlx_node_namer namer,
     const mlx_array arr) {
   try {
-    // get_name returns std::string by value; keep it in a thread-local so the
-    // returned pointer stays valid until the next call on this thread instead
-    // of dangling on a temporary. Upstream 16fdd77 fixed the assignment, not
-    // the lifetime.
-    static thread_local std::string keep;
-    keep = mlx_node_namer_get_(namer).get_name(mlx_array_get_(arr));
-    *name = keep.c_str();
+    *name = mlx_node_namer_get_(namer).get_name(mlx_array_get_(arr)).c_str();
     return 0;
   } catch (std::exception& e) {
     mlx_error(e.what());
@@ -253,6 +247,25 @@ mlx_fast_metal_kernel mlx_fast_metal_kernel_new(
 `
 
 const metalKernelNewImpl = `
+inline mlx_fast_metal_kernel mlx_fast_metal_kernel_new_(
+    const std::string& name,
+    const std::vector<std::string>& input_names,
+    const std::vector<std::string>& output_names,
+    const std::string& source,
+    const std::string& header,
+    bool ensure_row_contiguous,
+    bool atomic_outputs) {
+  return mlx_fast_metal_kernel({new mlx_fast_metal_kernel_cpp_(
+      mlx::core::fast::metal_kernel(
+          name,
+          input_names,
+          output_names,
+          source,
+          header,
+          ensure_row_contiguous,
+          atomic_outputs))});
+}
+
 extern "C" mlx_fast_metal_kernel mlx_fast_metal_kernel_new(
     const char* name,
     const mlx_vector_string input_names,
@@ -262,15 +275,14 @@ extern "C" mlx_fast_metal_kernel mlx_fast_metal_kernel_new(
     bool ensure_row_contiguous,
     bool atomic_outputs) {
   try {
-    return mlx_fast_metal_kernel(
-        {new mlx_fast_metal_kernel_cpp_(mlx::core::fast::metal_kernel(
-            name,
-            mlx_vector_string_get_(input_names),
-            mlx_vector_string_get_(output_names),
-            source,
-            header,
-            ensure_row_contiguous,
-            atomic_outputs))});
+    return mlx_fast_metal_kernel_new_(
+        name,
+        mlx_vector_string_get_(input_names),
+        mlx_vector_string_get_(output_names),
+        source,
+        header,
+        ensure_row_contiguous,
+        atomic_outputs);
   } catch (std::exception& e) {
     mlx_error(e.what());
   }

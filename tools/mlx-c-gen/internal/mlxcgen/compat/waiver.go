@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -158,8 +159,15 @@ func checkSchema(version int) error {
 	return nil
 }
 
-// normalizeDecl collapses declaration whitespace so that formatting changes do
-// not read as divergences.
+// normalizeDecl canonicalizes declaration text so that formatting changes do
+// not read as divergences: whitespace runs collapse to single spaces, and any
+// whitespace around pointer stars is removed so "mlx_array *res",
+// "mlx_array* res", and "mlx_array*res" all compare equal.
 func normalizeDecl(decl string) string {
-	return strings.Join(strings.Fields(decl), " ")
+	decl = strings.Join(strings.Fields(decl), " ")
+	decl = pointerSpaceRE.ReplaceAllString(decl, "*")
+	return decl
 }
+
+// pointerSpaceRE matches whitespace adjacent to a pointer star.
+var pointerSpaceRE = regexp.MustCompile(`\s*\*\s*`)
