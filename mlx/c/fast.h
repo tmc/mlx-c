@@ -186,6 +186,10 @@ int mlx_fast_rope_dynamic(
     const mlx_array offset,
     const mlx_array freqs /* may be null */,
     const mlx_stream s);
+
+/**
+ * Computes: O = softmax(Q @ K.T) @ V *
+ */
 int mlx_fast_scaled_dot_product_attention(
     mlx_array* res,
     const mlx_array queries,
