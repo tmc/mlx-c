@@ -1,0 +1,51 @@
+# Declared divergences from upstream mlx-c for symbols we share with it.
+#
+# We are a superset fork: symbols only we ship are additive and need no entry
+# here. A shared symbol whose declaration differs from upstream's is a break for
+# anyone who installs our library expecting upstream's, so every one of them is
+# listed below with the resolution we intend. The `ours` and `upstream` fields
+# pin the divergence: if either declaration changes, the waiver goes stale and
+# the gate fails until it is re-read.
+#
+# Compared against manifest upstream.ref (upstream/mlx-v0.32.0).
+
+schema_version: 1
+
+divergences:
+  - name: mlx_cumprod
+    ours: "int mlx_cumprod(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)"
+    upstream: "int mlx_cumprod(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)"
+    reason: >-
+      Upstream v0.32.0 added an accumulation-dtype parameter. Our manifest skips
+      the C++ overload carrying std::optional<Dtype> (excluded_by_policy), so the
+      base name keeps the pre-0.32 arity.
+    resolution: >-
+      Bind the dtype overload under the base name to match upstream, and keep the
+      current arity only if a suffixed compatibility name is added. Decide with
+      the 0.32 cut.
+  - name: mlx_cumsum
+    ours: "int mlx_cumsum(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)"
+    upstream: "int mlx_cumsum(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)"
+    reason: >-
+      Same as mlx_cumprod: the std::optional<Dtype> overload is skipped by
+      manifest policy, so the base name keeps the pre-0.32 arity.
+    resolution: Resolve together with mlx_cumprod in the 0.32 cut.
+  - name: mlx_fast_metal_kernel_new
+    ours: "mlx_fast_metal_kernel mlx_fast_metal_kernel_new(const char* name, const mlx_vector_string input_names, const mlx_vector_string output_names, const char* source, const char* header, bool ensure_row_contiguous, bool atomic_outputs, mlx_math_mode math_mode)"
+    upstream: "mlx_fast_metal_kernel mlx_fast_metal_kernel_new(const char* name, const mlx_vector_string input_names, const mlx_vector_string output_names, const char* source, const char* header, bool ensure_row_contiguous, bool atomic_outputs)"
+    reason: >-
+      Our custom Metal-kernel hook carries an extra trailing math_mode argument
+      that upstream's constructor does not take.
+    resolution: >-
+      Additive-only discipline says the extra parameter belongs on a distinct
+      name (mlx_fast_metal_kernel_new_math_mode) with the shared name kept
+      upstream-compatible. Needs Travis's API call.
+  - name: mlx_metal_get_metallib_path
+    ours: "int mlx_metal_get_metallib_path(char** res)"
+    upstream: "int mlx_metal_get_metallib_path(const char** res)"
+    reason: >-
+      Constness of the out parameter differs; upstream returns a pointer the
+      caller must not free or modify.
+    resolution: >-
+      Adopt upstream's const char** spelling. This is a source-compatibility
+      break for no benefit; no reason to keep it.
