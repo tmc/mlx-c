@@ -30,6 +30,9 @@ three declared renames; `mlx_astype_copy` is preserved.
 | `8c14316` | removals.yaml: three declared renames with resolutions |
 | `ff16b3e` | Regenerated mlx/c/* + API lock + lock TU |
 | `b925db8` | compat-waivers.yaml: four declared shared-symbol divergences |
+| `80192c1` | private/enums.h: math_mode enum-conversion helper (hand-maintained file; found by the darwin compile) |
+| `588974f` | cmake/fix-stream-ordering.cmake: carry the ratified Stream::operator< std::tie fix as a second FetchContent patch (Stage-3 UB blocker) |
+| `26fd4e2`→`588974f` | pin bumps in mlx-go repoint/stage1-mlx-c track this tip |
 
 ## Tooling fixes that made this work (branch `gates/tooling-fixes`)
 
@@ -49,8 +52,11 @@ three declared renames; `mlx_astype_copy` is preserved.
 1. Review + push `gates/tooling-fixes` and `stage1/mlx-v0.32.0`; ff local
    `mlx-0.32` naming per plan (pushes are Travis's).
 2. Record resulting SHA as `<NEW032>`.
-3. Build the dylib (cmake + MLX v0.32.0 fetch) — not exercised here; the dry run
-   and this cut verify generation and gates, not compilation.
+3. ~~Build the dylib~~ DONE on darwin/arm64: full build green twice — once
+   pre-enums-fix (which caught the missing math_mode helper), once with the
+   stream-ordering patch applied to bundled MLX (std::tie confirmed in
+   _deps/mlx-src). mlx-c-event-test and mlx-c-stream-trace-test both exit 0.
+   Linux/CUDA remains unexercised → DGX validation.
 4. Phase 2: publish libs release, repoint mlx-go, regen Go bindings.
 5. Decision points still open (gate report): fast_metal_kernel_new math_mode
    naming, metallib_path constness, cumsum/cumprod dtype under base name,
