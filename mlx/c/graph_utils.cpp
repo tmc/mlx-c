@@ -42,7 +42,11 @@ extern "C" int mlx_node_namer_get_name(
     mlx_node_namer namer,
     const mlx_array arr) {
   try {
-    *name = mlx_node_namer_get_(namer).get_name(mlx_array_get_(arr)).c_str();
+    // get_name returns std::string by value; park it in a thread-local so
+    // the returned pointer outlives this call (upstream form dangles).
+    static thread_local std::string keep;
+    keep = mlx_node_namer_get_(namer).get_name(mlx_array_get_(arr));
+    *name = keep.c_str();
     return 0;
   } catch (std::exception& e) {
     mlx_error(e.what());
