@@ -140,6 +140,10 @@ func LoadDir(dir string) ([]Spec, error) {
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// A tree with no custom specs (e.g. jaccl deferred) is valid.
+			return nil, nil
+		}
 		return nil, fmt.Errorf("read custom spec dir: %w", err)
 	}
 	var specs []Spec

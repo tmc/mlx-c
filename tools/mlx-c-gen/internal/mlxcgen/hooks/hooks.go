@@ -90,7 +90,7 @@ func mlxSaveGGUF(w io.Writer, funcName string, impl bool) bool {
 	return true
 }
 
-// Compile caches are PER-OS-THREAD in MLX >= 0.32.1: compile_cache() returns
+// Compile caches are PER-OS-THREAD (compile_cache() returns
 // the calling thread's cache, and erase/clear act only on the passing
 // handle's view. The emitted docs below say this loudly because naive global
 // eviction silently no-ops across threads.
@@ -115,40 +115,43 @@ func EmitCompileCache(w io.Writer, impl bool) {
 }
 
 const compileCacheHeader = `
-/* Compile caches are PER-OS-THREAD in MLX >= 0.32.1: mlx_compile_cache_current()
- * returns the calling thread's cache view. mlx_detail_compile_erase and
- * mlx_detail_compile_clear_cache act ONLY on the cache view of the passed
- * handle -- they are not global operations. */
-typedef struct mlx_compile_cache_ mlx_compile_cache;
-mlx_compile_cache* mlx_compile_cache_current(void);
-int mlx_compile_cache_free(mlx_compile_cache* cache);
+/* Compile caches are PER-OS-THREAD: mlx_compile_cache_current() returns the
+ * calling thread's cache view. The handle-taking erase/clear API arrived in
+ * MLX 0.32.1; mlx_detail_compile_erase and mlx_detail_compile_clear_cache act
+ * ONLY on the cache view of the passed handle -- they are not global
+ * operations. */
+typedef struct mlx_compile_cache_ {
+  void* ctx; /* heap-allocated std::weak_ptr<CompileCache> */
+} mlx_compile_cache;
+mlx_compile_cache mlx_compile_cache_current(void);
+int mlx_compile_cache_free(mlx_compile_cache cache);
 `
 
 const compileCacheImpl = `
-struct mlx_compile_cache_ {
-  std::weak_ptr<mlx::core::detail::CompileCache> ctx;
-};
-
-std::weak_ptr<mlx::core::detail::CompileCache> mlx_compile_cache_weakptr_get_(
+std::weak_ptr<mlx::core::detail::CompileCache>& mlx_compile_cache_weakptr_get_(
     mlx_compile_cache cache) {
-  if (cache.ctx.expired()) {
+  if (!cache.ctx) {
     throw std::runtime_error("expected a live mlx_compile_cache");
   }
-  return cache.ctx;
+  return *static_cast<std::weak_ptr<mlx::core::detail::CompileCache>*>(
+      cache.ctx);
 }
 
-extern "C" mlx_compile_cache* mlx_compile_cache_current(void) {
+extern "C" mlx_compile_cache mlx_compile_cache_current(void) {
   try {
-    return new mlx_compile_cache_{mlx::core::detail::compile_cache()};
+    return mlx_compile_cache{
+        new std::weak_ptr<mlx::core::detail::CompileCache>(
+            mlx::core::detail::compile_cache())};
   } catch (std::exception& e) {
     mlx_error(e.what());
   }
-  return nullptr;
+  return {nullptr};
 }
 
-extern "C" int mlx_compile_cache_free(mlx_compile_cache* cache) {
+extern "C" int mlx_compile_cache_free(mlx_compile_cache cache) {
   try {
-    delete cache;
+    delete static_cast<std::weak_ptr<mlx::core::detail::CompileCache>*>(
+        cache.ctx);
     return 0;
   } catch (std::exception& e) {
     mlx_error(e.what());

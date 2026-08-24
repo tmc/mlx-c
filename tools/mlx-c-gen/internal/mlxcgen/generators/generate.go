@@ -61,8 +61,17 @@ func (g *Generator) Generate(w io.Writer, result *parser.ParseResult, headerName
 
 	// Write header
 	g.writeHeader(w, headerName, headers, impl, docstring)
+	// Glue only when the detail compile-cache functions actually bound:
+	// they exist only in MLX >= 0.32.1 (mlx/compile_impl.h).
 	if headerName == "compile" {
-		hooks.EmitCompileCache(w, impl)
+		for _, f := range allFuncs {
+			for _, pt := range f.ParamTypes {
+				if pt == "CompileCacheWeakPtr" {
+					hooks.EmitCompileCache(w, impl)
+					break
+				}
+			}
+		}
 	}
 
 	// Write enums (only in header)

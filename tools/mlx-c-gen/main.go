@@ -487,9 +487,16 @@ func runGenerate(args []string) error {
 	// API surface recorded in the tree's committed lock, except where
 	// codegen/removals.yaml declares the removal. Without this, an unbindable
 	// function silently vanishes from generated output and breaks consumers.
-	baselineLockPath := filepath.Join(root, "codegen", "mlxc-capi.lock.json")
+	// The expectation set is the lock of the tree being written into, when
+	// that tree carries one. Trees without a lock (version-pinned checkouts
+	// regenerated across MLX versions, throwaway outputs) are not guarded:
+	// comparing across versions would flag every intentional difference.
+	baselineLockPath := filepath.Join(filepath.Dir(outDir), "codegen", "mlxc-capi.lock.json")
 	if success {
-		if base, err := apilock.Load(baselineLockPath); err == nil {
+		if _, err := os.Stat(baselineLockPath); err != nil {
+			baselineLockPath = ""
+		}
+		if base, err := apilock.Load(baselineLockPath); err == nil && baselineLockPath != "" {
 			emitted, err := apilock.Generate(outDir)
 			if err != nil {
 				fmt.Printf("  ERROR verifying emitted API lock: %v\n", err)
@@ -2498,9 +2505,12 @@ func checkCustomSpecs(opts checkOptions, lock *apilock.Lock) error {
 	if opts.Options.CustomDir == "" {
 		return nil
 	}
-	specs, err := customspec.LoadDir(repoPath(opts.Options.RepoRoot, opts.Options.CustomDir))
-	if err != nil {
-		return err
+	var specs []customspec.Spec
+	if _, err := os.Stat(repoPath(opts.Options.RepoRoot, opts.Options.CustomDir)); err == nil {
+		specs, err = customspec.LoadDir(repoPath(opts.Options.RepoRoot, opts.Options.CustomDir))
+		if err != nil {
+			return err
+		}
 	}
 	if err := customspec.CheckLock(lock, specs); err != nil {
 		return err

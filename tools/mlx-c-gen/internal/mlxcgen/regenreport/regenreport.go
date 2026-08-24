@@ -596,6 +596,9 @@ func customSpecDigests(root, dir string) ([]PathDigest, error) {
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("read custom spec dir for digests: %w", err)
 	}
 	var out []PathDigest
