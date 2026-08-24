@@ -90,6 +90,10 @@ hook_api:
       - mlx_fast_metal_kernel_config_add_template_arg_int
       - mlx_fast_metal_kernel_config_add_template_arg_bool
       - mlx_fast_metal_kernel
+      - mlx_math_mode
+      - MLX_MATH_MODE_SAFE
+      - MLX_MATH_MODE_RELAXED
+      - MLX_MATH_MODE_FAST
       - mlx_fast_metal_kernel_new
       - mlx_fast_metal_kernel_free
       - mlx_fast_metal_kernel_apply
@@ -232,27 +236,27 @@ variant_mappings:
         doc: Evaluate the arrays asynchronously.
       - signature: "void(Arrays&&...)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     atleast_1d:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
       - signature: "std::vector<array>(std::vector<array>, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     atleast_2d:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
         doc: Return a view of the input with at least two dimensions.
       - signature: "std::vector<array>(std::vector<array>, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     atleast_3d:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
         doc: Return a view of the input with at least three dimensions.
       - signature: "std::vector<array>(std::vector<array>, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     bartlett:
       - signature: "array(int, StreamOrDevice)"
         suffix: ""
@@ -298,7 +302,7 @@ variant_mappings:
         suffix: ""
       - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::vector<array>(*)(const std::vector<array>&), bool)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "std::function<std::vector<array>(const std::vector<array>&)>(F&, bool)"
         skip: true
         reason: template_function
@@ -345,10 +349,10 @@ variant_mappings:
         suffix: "axes"
         doc: Count nonzero elements over multiple axes.
       - signature: "array(array, int, bool, StreamOrDevice)"
-        suffix: "axis"
+        suffix: ""
         doc: Count nonzero elements over one axis.
       - signature: "array(array, bool, StreamOrDevice)"
-        suffix: ""
+        suffix: "keepdims"
     copy:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
@@ -363,13 +367,13 @@ variant_mappings:
         suffix: ""
       - signature: "array(array, bool, bool, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     cummin:
       - signature: "array(array, int, bool, bool, StreamOrDevice)"
         suffix: ""
       - signature: "array(array, bool, bool, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     cumprod:
       - signature: "array(array, int, bool, bool, std::optional<Dtype>, StreamOrDevice)"
         suffix: "dtype"
@@ -378,10 +382,10 @@ variant_mappings:
         doc: Return the cumulative product along an axis.
       - signature: "array(array, bool, bool, std::optional<Dtype>, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "array(array, bool, bool, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     cumsum:
       - signature: "array(array, int, bool, bool, std::optional<Dtype>, StreamOrDevice)"
         suffix: "dtype"
@@ -390,10 +394,10 @@ variant_mappings:
         doc: Return the cumulative sum along an axis.
       - signature: "array(array, bool, bool, std::optional<Dtype>, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "array(array, bool, bool, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     custom_function:
       - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<std::vector<array>(const std::vector<array>&)>, std::optional<std::function<std::vector<array>(const std::vector<array>&, const std::vector<array>&, const std::vector<array>&)>>, std::optional<std::function<std::vector<array>(const std::vector<array>&, const std::vector<array>&, const std::vector<int>&)>>, std::optional<std::function<std::pair<std::vector<array>, std::vector<int>>(const std::vector<array>&, const std::vector<int>&)>>)"
         suffix: ""
@@ -454,7 +458,7 @@ variant_mappings:
         doc: Evaluate the arrays synchronously.
       - signature: "void(Arrays&&...)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     expand_dims:
       - signature: "array(array, std::vector<int>, StreamOrDevice)"
         suffix: "axes"
@@ -466,13 +470,13 @@ variant_mappings:
         doc: Export the computation graph for the arrays in DOT format.
       - signature: "void(std::ostream, NodeNamer, Arrays&&...)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "void(std::ostream, std::vector<array>)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "void(std::ostream, Arrays&&...)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     exp:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
@@ -502,11 +506,11 @@ variant_mappings:
         reason: covered_by_other_variant
     flip:
       - signature: "array(array, std::vector<int>, StreamOrDevice)"
-        suffix: "axes"
+        suffix: ""
       - signature: "array(array, int, StreamOrDevice)"
         suffix: "axis"
       - signature: "array(array, StreamOrDevice)"
-        suffix: ""
+        suffix: "all"
     floor:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
@@ -560,13 +564,13 @@ variant_mappings:
     grad:
       - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<array(const std::vector<array>&)>, std::vector<int>)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<array(const std::vector<array>&)>, int)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "std::function<array(const array&)>(std::function<array(const array&)>)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     greater:
       - signature: "array(array, array, StreamOrDevice)"
         suffix: ""
@@ -623,7 +627,7 @@ variant_mappings:
         suffix: ""
       - signature: "std::pair<array, array>(std::function<array(const array&)>, array, array)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     kron:
       - signature: "array(array, array, StreamOrDevice)"
         suffix: ""
@@ -673,7 +677,7 @@ variant_mappings:
         suffix: ""
       - signature: "array(array, bool, bool, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     logical_and:
       - signature: "array(array, array, StreamOrDevice)"
         suffix: ""
@@ -821,13 +825,13 @@ variant_mappings:
         doc: Print the computation graph for the arrays.
       - signature: "void(std::ostream, NodeNamer, Arrays&&...)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "void(std::ostream, std::vector<array>)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "void(std::ostream, Arrays&&...)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     prod:
       - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
         suffix: "axes"
@@ -1100,12 +1104,12 @@ variant_mappings:
         suffix: "axis"
       - signature: "array(array, int, int, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "array(array, array, StreamOrDevice)"
         suffix: ""
       - signature: "array(array, int, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     take_along_axis:
       - signature: "array(array, array, int, StreamOrDevice)"
         suffix: ""
@@ -1173,25 +1177,25 @@ variant_mappings:
         suffix: ""
     unstack:
       - signature: "std::vector<array>(array, int, StreamOrDevice)"
-        suffix: "axis"
-      - signature: "std::vector<array>(array, StreamOrDevice)"
         suffix: ""
+      - signature: "std::vector<array>(array, StreamOrDevice)"
+        suffix: "all"
         doc: Unstack an array along the default axis.
     value_and_grad:
       - signature: "ValueAndGradFn(std::function<std::vector<array>(const std::vector<array>&)>, std::vector<int>)"
         suffix: ""
       - signature: "ValueAndGradFn(std::function<std::vector<array>(const std::vector<array>&)>, int)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "SimpleValueAndGradFn(std::function<array(const std::vector<array>&)>, std::vector<int>)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "SimpleValueAndGradFn(std::function<array(const std::vector<array>&)>, int)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "std::function<std::pair<array, array>(const array&)>(std::function<array(const array&)>)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     var:
       - signature: "array(array, std::vector<int>, bool, int, StreamOrDevice)"
         suffix: "axes"
@@ -1207,17 +1211,17 @@ variant_mappings:
         suffix: ""
       - signature: "std::pair<array, array>(std::function<array(const array&)>, array, array)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     vmap:
       - signature: "std::function<array(const array&, const array&)>(std::function<array(const array&, const array&)>, int, int, int)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "std::function<array(const array&)>(std::function<array(const array&)>, int, int)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
       - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<std::vector<array>(const std::vector<array>&)>, std::vector<int>, std::vector<int>)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     view:
       - signature: "array(array, Dtype, StreamOrDevice)"
         suffix: ""
@@ -1297,7 +1301,7 @@ variant_mappings:
     precompiled_cuda_kernel:
       - signature: "std::vector<array>(std::string, std::string, std::vector<array>, std::vector<Shape>, std::vector<Dtype>, std::vector<ScalarArg>, std::tuple<int, int, int>, std::tuple<int, int, int>, int, std::optional<float>, bool, StreamOrDevice)"
         skip: true
-        reason: not_c_api
+        reason: excluded_by_policy
     rms_norm:
       - signature: "array(array, std::optional<array>, float, StreamOrDevice)"
         suffix: ""
