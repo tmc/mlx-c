@@ -41,6 +41,7 @@ extern mlx_jaccl_config mlx_jaccl_config_from_env(void);
 extern bool mlx_jaccl_config_is_valid_mesh(mlx_jaccl_config config);
 extern bool mlx_jaccl_config_is_valid_ring(mlx_jaccl_config config);
 extern mlx_jaccl_config mlx_jaccl_config_new(void);
+extern int mlx_jaccl_config_new_out(mlx_jaccl_config* res);
 extern int mlx_jaccl_config_prefer_ring(mlx_jaccl_config config, bool prefer);
 extern bool mlx_jaccl_config_prefers_ring(mlx_jaccl_config config);
 extern int mlx_jaccl_config_rank(mlx_jaccl_config config);
@@ -89,6 +90,9 @@ _Static_assert(MLX_COMPILE_MODE_NO_FUSE == 2, "mlx_compile_mode.MLX_COMPILE_MODE
 _Static_assert(MLX_COMPILE_MODE_ENABLED == 3, "mlx_compile_mode.MLX_COMPILE_MODE_ENABLED ABI break");
 _Static_assert(MLX_CPU == 0, "mlx_device_type.MLX_CPU ABI break");
 _Static_assert(MLX_GPU == 1, "mlx_device_type.MLX_GPU ABI break");
+_Static_assert(MLX_MATH_MODE_SAFE == 0, "mlx_math_mode.MLX_MATH_MODE_SAFE ABI break");
+_Static_assert(MLX_MATH_MODE_RELAXED == 1, "mlx_math_mode.MLX_MATH_MODE_RELAXED ABI break");
+_Static_assert(MLX_MATH_MODE_FAST == 2, "mlx_math_mode.MLX_MATH_MODE_FAST ABI break");
 _Static_assert(MLX_FFT_NORM_BACKWARD == 0, "mlx_fft_norm.MLX_FFT_NORM_BACKWARD ABI break");
 _Static_assert(MLX_FFT_NORM_ORTHO == 1, "mlx_fft_norm.MLX_FFT_NORM_ORTHO ABI break");
 _Static_assert(MLX_FFT_NORM_FORWARD == 2, "mlx_fft_norm.MLX_FFT_NORM_FORWARD ABI break");
@@ -367,7 +371,7 @@ extern int mlx_fast_metal_kernel_config_set_init_value(mlx_fast_metal_kernel_con
 extern int mlx_fast_metal_kernel_config_set_thread_group(mlx_fast_metal_kernel_config cls, int thread1, int thread2, int thread3);
 extern int mlx_fast_metal_kernel_config_set_verbose(mlx_fast_metal_kernel_config cls, bool verbose);
 extern void mlx_fast_metal_kernel_free(mlx_fast_metal_kernel cls);
-extern mlx_fast_metal_kernel mlx_fast_metal_kernel_new(const char* name, const mlx_vector_string input_names, const mlx_vector_string output_names, const char* source, const char* header, bool ensure_row_contiguous, bool atomic_outputs);
+extern mlx_fast_metal_kernel mlx_fast_metal_kernel_new(const char* name, const mlx_vector_string input_names, const mlx_vector_string output_names, const char* source, const char* header, bool ensure_row_contiguous, bool atomic_outputs, mlx_math_mode math_mode);
 extern int mlx_fast_rms_norm(mlx_array* res, const mlx_array x, const mlx_array weight, float eps, const mlx_stream s);
 extern int mlx_fast_rope(mlx_array* res, const mlx_array x, int dims, bool traditional, mlx_optional_float base, float scale, int offset, const mlx_array freqs, const mlx_stream s);
 extern int mlx_fast_rope_dynamic(mlx_array* res, const mlx_array x, int dims, bool traditional, mlx_optional_float base, float scale, const mlx_array offset, const mlx_array freqs, const mlx_stream s);
@@ -472,7 +476,7 @@ extern int mlx_reset_peak_memory(void);
 extern int mlx_set_cache_limit(size_t* res, size_t limit);
 extern int mlx_set_memory_limit(size_t* res, size_t limit);
 extern int mlx_set_wired_limit(size_t* res, size_t limit);
-extern int mlx_metal_get_metallib_path(mlx_string* res);
+extern int mlx_metal_get_metallib_path(char** res);
 extern int mlx_metal_is_available(bool* res);
 extern int mlx_metal_set_metallib_path(const char* path);
 extern int mlx_metal_start_capture(const char* path);
@@ -535,9 +539,9 @@ extern int mlx_conv_transpose3d(mlx_array* res, const mlx_array input, const mlx
 extern int mlx_copy(mlx_array* res, const mlx_array a, const mlx_stream s);
 extern int mlx_cos(mlx_array* res, const mlx_array a, const mlx_stream s);
 extern int mlx_cosh(mlx_array* res, const mlx_array a, const mlx_stream s);
-extern int mlx_count_nonzero(mlx_array* res, const mlx_array a, bool keepdims, const mlx_stream s);
+extern int mlx_count_nonzero(mlx_array* res, const mlx_array a, int axis, bool keepdims, const mlx_stream s);
 extern int mlx_count_nonzero_axes(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, bool keepdims, const mlx_stream s);
-extern int mlx_count_nonzero_axis(mlx_array* res, const mlx_array a, int axis, bool keepdims, const mlx_stream s);
+extern int mlx_count_nonzero_keepdims(mlx_array* res, const mlx_array a, bool keepdims, const mlx_stream s);
 extern int mlx_cummax(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s);
 extern int mlx_cummin(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s);
 extern int mlx_cumprod(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s);
@@ -562,8 +566,8 @@ extern int mlx_expand_dims_axes(mlx_array* res, const mlx_array a, const int* ax
 extern int mlx_expm1(mlx_array* res, const mlx_array a, const mlx_stream s);
 extern int mlx_eye(mlx_array* res, int n, int m, int k, mlx_dtype dtype, const mlx_stream s);
 extern int mlx_flatten(mlx_array* res, const mlx_array a, int start_axis, int end_axis, const mlx_stream s);
-extern int mlx_flip(mlx_array* res, const mlx_array a, const mlx_stream s);
-extern int mlx_flip_axes(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, const mlx_stream s);
+extern int mlx_flip(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, const mlx_stream s);
+extern int mlx_flip_all(mlx_array* res, const mlx_array a, const mlx_stream s);
 extern int mlx_flip_axis(mlx_array* res, const mlx_array a, int axis, const mlx_stream s);
 extern int mlx_floor(mlx_array* res, const mlx_array a, const mlx_stream s);
 extern int mlx_floor_divide(mlx_array* res, const mlx_array a, const mlx_array b, const mlx_stream s);
@@ -722,8 +726,8 @@ extern int mlx_tril(mlx_array* res, const mlx_array x, int k, const mlx_stream s
 extern int mlx_triu(mlx_array* res, const mlx_array x, int k, const mlx_stream s);
 extern int mlx_trunc(mlx_array* res, const mlx_array a, const mlx_stream s);
 extern int mlx_unflatten(mlx_array* res, const mlx_array a, int axis, const int* shape, size_t shape_num, const mlx_stream s);
-extern int mlx_unstack(mlx_vector_array* res, const mlx_array a, const mlx_stream s);
-extern int mlx_unstack_axis(mlx_vector_array* res, const mlx_array a, int axis, const mlx_stream s);
+extern int mlx_unstack(mlx_vector_array* res, const mlx_array a, int axis, const mlx_stream s);
+extern int mlx_unstack_all(mlx_vector_array* res, const mlx_array a, const mlx_stream s);
 extern int mlx_var(mlx_array* res, const mlx_array a, bool keepdims, int ddof, const mlx_stream s);
 extern int mlx_var_axes(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, bool keepdims, int ddof, const mlx_stream s);
 extern int mlx_var_axis(mlx_array* res, const mlx_array a, int axis, bool keepdims, int ddof, const mlx_stream s);
@@ -829,4 +833,3 @@ extern int mlx_vector_vector_array_set_data(mlx_vector_vector_array* vec, const 
 extern int mlx_vector_vector_array_set_value(mlx_vector_vector_array* vec, const mlx_vector_array val);
 extern size_t mlx_vector_vector_array_size(mlx_vector_vector_array vec);
 extern int mlx_version(mlx_string* str_);
-

@@ -89,6 +89,11 @@ int mlx_jaccl_group_free(mlx_jaccl_group group);
 mlx_jaccl_config mlx_jaccl_config_new(void);
 
 /**
+ * Create a configuration and store it in res.
+ */
+int mlx_jaccl_config_new_out(mlx_jaccl_config* res);
+
+/**
  * Create a configuration from JACCL environment variables.
  *
  * Returns an empty configuration and sets mlx_jaccl_last_error when the
