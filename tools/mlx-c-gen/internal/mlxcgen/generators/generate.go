@@ -61,6 +61,9 @@ func (g *Generator) Generate(w io.Writer, result *parser.ParseResult, headerName
 
 	// Write header
 	g.writeHeader(w, headerName, headers, impl, docstring)
+	if headerName == "compile" {
+		hooks.EmitCompileCache(w, impl)
+	}
 
 	// Write enums (only in header)
 	if !impl {

@@ -13,12 +13,12 @@ type Hook func(w io.Writer, funcName string, impl bool) bool
 
 // hooks maps function names to their special handlers.
 var hooks = map[string]Hook{
-	"mlx_export_to_dot":     mlxExportToDot,
-	"mlx_fast_metal_kernel": mlxFastMetalKernel,
-	"mlx_fast_cuda_kernel":  mlxFastCudaKernel,
-	"mlx_load_gguf":         mlxLoadGGUF,
-	"mlx_print_graph":       mlxPrintGraph,
-	"mlx_save_gguf":         mlxSaveGGUF,
+	"mlx_export_to_dot":              mlxExportToDot,
+	"mlx_fast_metal_kernel":          mlxFastMetalKernel,
+	"mlx_fast_cuda_kernel":           mlxFastCudaKernel,
+	"mlx_load_gguf":                  mlxLoadGGUF,
+	"mlx_print_graph":                mlxPrintGraph,
+	"mlx_save_gguf":                  mlxSaveGGUF,
 }
 
 // GetHook returns the hook for a function name, or nil if none exists.
@@ -89,6 +89,73 @@ func mlxSaveGGUF(w io.Writer, funcName string, impl bool) bool {
 	}
 	return true
 }
+
+// Compile caches are PER-OS-THREAD in MLX >= 0.32.1: compile_cache() returns
+// the calling thread's cache, and erase/clear act only on the passing
+// handle's view. The emitted docs below say this loudly because naive global
+// eviction silently no-ops across threads.
+
+// EmitCompileCache writes the compile-cache handle glue once per phase.
+// Exported for the generator: the compile module emits it before the standard
+// binding of erase/clear.
+var compileCacheHeaderDone, compileCacheImplDone bool
+
+func EmitCompileCache(w io.Writer, impl bool) {
+	if impl {
+		if !compileCacheImplDone {
+			compileCacheImplDone = true
+			io.WriteString(w, compileCacheImpl)
+		}
+		return
+	}
+	if !compileCacheHeaderDone {
+		compileCacheHeaderDone = true
+		io.WriteString(w, compileCacheHeader)
+	}
+}
+
+const compileCacheHeader = `
+/* Compile caches are PER-OS-THREAD in MLX >= 0.32.1: mlx_compile_cache_current()
+ * returns the calling thread's cache view. mlx_detail_compile_erase and
+ * mlx_detail_compile_clear_cache act ONLY on the cache view of the passed
+ * handle -- they are not global operations. */
+typedef struct mlx_compile_cache_ mlx_compile_cache;
+mlx_compile_cache* mlx_compile_cache_current(void);
+int mlx_compile_cache_free(mlx_compile_cache* cache);
+`
+
+const compileCacheImpl = `
+struct mlx_compile_cache_ {
+  std::weak_ptr<mlx::core::detail::CompileCache> ctx;
+};
+
+std::weak_ptr<mlx::core::detail::CompileCache> mlx_compile_cache_weakptr_get_(
+    mlx_compile_cache cache) {
+  if (cache.ctx.expired()) {
+    throw std::runtime_error("expected a live mlx_compile_cache");
+  }
+  return cache.ctx;
+}
+
+extern "C" mlx_compile_cache* mlx_compile_cache_current(void) {
+  try {
+    return new mlx_compile_cache_{mlx::core::detail::compile_cache()};
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+  }
+  return nullptr;
+}
+
+extern "C" int mlx_compile_cache_free(mlx_compile_cache* cache) {
+  try {
+    delete cache;
+    return 0;
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+}
+`
 
 const graphUtilsNodeNamerHeader = `
 typedef struct mlx_node_namer_ {

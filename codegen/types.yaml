@@ -47,6 +47,15 @@ types:
     ownership: value
     nullability: nonnull
     conversion: enum
+  - cpp: "CompileCacheWeakPtr"
+    alternates:
+      - "const CompileCacheWeakPtr&"
+      - "const CompileCacheWeakPtr &"
+      - "std::weak_ptr<mlx::core::CompileCache>"
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
   - cpp: "mlx::core::NodeNamer"
     c: mlx_node_namer
     alternates:

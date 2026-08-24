@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"github.com/tmc/mlx-c/tools/mlx-c-gen/internal/mlxcgen/apilock"
+	"github.com/tmc/mlx-c/tools/mlx-c-gen/internal/mlxcgen/compat"
 	"github.com/tmc/mlx-c/tools/mlx-c-gen/internal/mlxcgen/customspec"
 	"github.com/tmc/mlx-c/tools/mlx-c-gen/internal/mlxcgen/doccoverage"
 	"github.com/tmc/mlx-c/tools/mlx-c-gen/internal/mlxcgen/generators"
@@ -475,6 +476,32 @@ func runGenerate(args []string) error {
 			}
 		}
 		fmt.Println()
+	}
+
+	// Loud-failure guard: the freshly generated output must never shrink the
+	// API surface recorded in the tree's committed lock, except where
+	// codegen/removals.yaml declares the removal. Without this, an unbindable
+	// function silently vanishes from generated output and breaks consumers.
+	baselineLockPath := filepath.Join(root, "codegen", "mlxc-capi.lock.json")
+	if success {
+		if base, err := apilock.Load(baselineLockPath); err == nil {
+			emitted, err := apilock.Generate(outDir)
+			if err != nil {
+				fmt.Printf("  ERROR verifying emitted API lock: %v\n", err)
+				success = false
+			} else {
+				waivers, err := compat.LoadRemovalWaivers(filepath.Join(root, "codegen", "removals.yaml"))
+				if err != nil {
+					fmt.Printf("  ERROR loading removals: %v\n", err)
+					success = false
+				} else if res := compat.CheckMonotonic(base, emitted, waivers); !res.OK() {
+					for _, p := range res.Problems {
+						fmt.Println("  ERROR: " + p)
+					}
+					success = false
+				}
+			}
+		}
 	}
 
 	if success && *reportPath != "" {

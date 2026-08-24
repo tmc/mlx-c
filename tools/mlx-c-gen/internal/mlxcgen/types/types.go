@@ -313,6 +313,25 @@ func (r *Registry) registerAll() {
 		CArgUntyped: func(s string) string { return s },
 	})
 
+	// Compile cache handle (MLX >= 0.32.1: caches are per-OS-thread;
+	// erase/clear act only on the passing handle's view).
+	r.Register(&TypeMapping{
+		CppType: "CompileCacheWeakPtr",
+		Alt: []string{
+			"const CompileCacheWeakPtr&",
+			"const CompileCacheWeakPtr &",
+			"std::weak_ptr<mlx::core::CompileCache>",
+		},
+		CToCpp:  func(s string) string { return "mlx_compile_cache_weakptr_get_(" + s + ")" },
+		CArg: func(s string) string {
+			if s == "" {
+				return "mlx_compile_cache"
+			}
+			return "mlx_compile_cache " + s
+		},
+		CArgUntyped: func(s string) string { return s },
+	})
+
 	r.Register(&TypeMapping{
 		CppType: "std::ostream",
 		CToCpp: func(s string) string {
