@@ -30,6 +30,8 @@ type Options struct {
 	RepoRoot string
 	// Jaccl includes opt-in custom bindings (jaccl) in generation and gates.
 	Jaccl bool
+	// ApplyFixes selects named emission fixes for internal regeneration.
+	ApplyFixes []string
 	// OutputsDir is the tree root whose generated files are verified, by
 	// default the input root itself. Set it to verify outputs living in
 	// another checkout.
@@ -755,6 +757,9 @@ func generatorArgs(opts Options, root, typesOut string) []string {
 	}
 	if opts.Jaccl {
 		args = append(args, "--jaccl")
+	}
+	if len(opts.ApplyFixes) > 0 {
+		args = append(args, "--with-fixes="+strings.Join(opts.ApplyFixes, ","))
 	}
 	return args
 }

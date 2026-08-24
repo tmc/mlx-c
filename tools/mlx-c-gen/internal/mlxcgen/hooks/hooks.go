@@ -4,12 +4,49 @@ package hooks
 import (
 	"io"
 	"sort"
+	"strings"
 )
 
 // Hook is a function that handles special cases in code generation.
 // It returns true if it handled the function (caller should skip normal generation),
 // or false if the caller should proceed with normal generation.
 type Hook func(w io.Writer, funcName string, impl bool) bool
+
+// Known fixes: named deviations from upstream-exact emission, applied when
+// listed in the manifest's apply_fixes (or via --with-fixes).
+const (
+	FixNodeNamerLifetime = "node_namer_lifetime"
+)
+
+var appliedFixes = map[string]bool{}
+
+// SetAppliedFixes selects which known fixes affect emission. Unknown names
+// are rejected by the caller after consulting KnownFixes.
+func SetAppliedFixes(names []string) {
+	appliedFixes = map[string]bool{}
+	for _, n := range names {
+		appliedFixes[n] = true
+	}
+}
+
+// KnownFixes lists every supported fix name.
+func KnownFixes() []string { return []string{FixNodeNamerLifetime} }
+
+const nodeNamerDanglingGet = `    *name = mlx_node_namer_get_(namer).get_name(mlx_array_get_(arr)).c_str();`
+
+const nodeNamerFixedGet = `    // get_name returns std::string by value; park it in a thread-local so
+    // the returned pointer outlives this call (upstream form dangles).
+    static thread_local std::string keep;
+    keep = mlx_node_namer_get_(namer).get_name(mlx_array_get_(arr));
+    *name = keep.c_str();`
+
+func nodeNamerImplText() string {
+	text := graphUtilsNodeNamerImpl
+	if appliedFixes[FixNodeNamerLifetime] {
+		text = strings.Replace(text, nodeNamerDanglingGet, nodeNamerFixedGet, 1)
+	}
+	return text
+}
 
 // hooks maps function names to their special handlers.
 var hooks = map[string]Hook{
@@ -54,7 +91,7 @@ func mlxFastCudaKernel(w io.Writer, funcName string, impl bool) bool {
 
 func mlxExportToDot(w io.Writer, funcName string, impl bool) bool {
 	if impl {
-		io.WriteString(w, graphUtilsNodeNamerImpl)
+		io.WriteString(w, nodeNamerImplText())
 		io.WriteString(w, graphUtilsExportToDotImpl)
 	} else {
 		io.WriteString(w, graphUtilsNodeNamerHeader)

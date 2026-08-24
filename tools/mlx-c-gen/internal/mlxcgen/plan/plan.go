@@ -36,6 +36,7 @@ type HeaderMapping struct {
 
 // Manifest describes the generator output plan.
 type Manifest struct {
+	ApplyFixes             []string                        `yaml:"apply_fixes,omitempty"`
 	SchemaVersion          int                             `yaml:"schema_version"`
 	MLX                    MLXPolicy                       `yaml:"mlx,omitempty"`
 	Upstream               UpstreamPolicy                  `yaml:"upstream,omitempty"`

@@ -140,6 +140,7 @@ func runGenerate(args []string) error {
 	noDocs := fs.Bool("no-docs", false, "Omit doc comments above generated declarations")
 	out := fs.String("out", "", "Output destination directory (default <root>/mlx/c); may point into another checkout")
 	jaccl := fs.Bool("jaccl", false, "Also emit opt-in custom bindings (jaccl)")
+	withFixes := fs.String("with-fixes", "", "Comma-separated fix names, or 'all'; applied on top of manifest apply_fixes")
 	root, rest, err := takeRoot(args)
 	if err != nil {
 		return err
@@ -198,6 +199,12 @@ func runGenerate(args []string) error {
 		}
 	}
 	customSpecs := customspecsForRun(allSpecs, *jaccl)
+
+	applied, err := resolveAppliedFixes(manifest.ApplyFixes, *withFixes)
+	if err != nil {
+		return err
+	}
+	hooks.SetAppliedFixes(applied)
 
 	fmt.Printf("Output directory: %s\n\n", outDir)
 
@@ -736,6 +743,56 @@ var clangFormatVersionCache struct {
 	err     error
 }
 
+// resolveAppliedFixes merges manifest apply_fixes with --with-fixes and
+// validates every name against the known catalog.
+func resolveAppliedFixes(manifestNames []string, withFixes string) ([]string, error) {
+	known := map[string]bool{}
+	for _, n := range hooks.KnownFixes() {
+		known[n] = true
+	}
+	var out []string
+	seen := map[string]bool{}
+	add := func(list string, fromManifest bool) error {
+		if list == "" {
+			return nil
+		}
+		for _, n := range strings.Split(list, ",") {
+			n = strings.TrimSpace(n)
+			if n == "" {
+				continue
+			}
+			if n == "all" && !fromManifest {
+				for _, k := range hooks.KnownFixes() {
+					if !seen[k] {
+						seen[k] = true
+						out = append(out, k)
+					}
+				}
+				continue
+			}
+			if !known[n] {
+				return fmt.Errorf("unknown fix %q (known: %s, all; from %s)", n,
+					strings.Join(hooks.KnownFixes(), ", "),
+					map[bool]string{true: "manifest", false: "--with-fixes"}[fromManifest])
+			}
+			if !seen[n] {
+				seen[n] = true
+				out = append(out, n)
+			}
+		}
+		return nil
+	}
+	for _, n := range manifestNames {
+		if err := add(n, true); err != nil {
+			return nil, err
+		}
+	}
+	if err := add(withFixes, false); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // clangFormatStylePath resolves the committed .clang-format for a tree root.
 func clangFormatStylePath(root string) (string, error) {
 	p := filepath.Join(root, ".clang-format")
@@ -904,6 +961,7 @@ type parseOptions struct {
 	OutPath             string
 	ReportPath          string
 	Jaccl               bool
+	ApplyFixes          []string
 }
 
 type parseReport struct {
@@ -2211,9 +2269,21 @@ func parseCheckOptions(args []string) (checkOptions, error) {
 	if err != nil {
 		return opts, err
 	}
+	var manifestForCheck plan.Manifest
+	if manifestPath := filepath.Join(root, "codegen", "manifest.yaml"); func() bool {
+		_, err := os.Stat(manifestPath)
+		return err == nil
+	}() {
+		m, err := plan.LoadPath(manifestPath)
+		if err != nil {
+			return opts, err
+		}
+		manifestForCheck = m
+	}
 	opts.Options = regenreport.Options{
 		RepoRoot:            root,
 		OutputsDir:          *outputs,
+		ApplyFixes:          manifestForCheck.ApplyFixes,
 		Jaccl:               *jaccl,
 		MLXSrc:              mlxSrcResolved,
 		ManifestPath:        filepath.Join(root, "codegen", "manifest.yaml"),
