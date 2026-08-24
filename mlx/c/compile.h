@@ -28,6 +28,16 @@ extern "C" {
  */
 /**@{*/
 
+/* Compile caches are PER-OS-THREAD: mlx_compile_cache_current() returns the
+ * calling thread's cache view. The handle-taking erase/clear API arrived in
+ * MLX 0.32.1; mlx_detail_compile_erase and mlx_detail_compile_clear_cache act
+ * ONLY on the cache view of the passed handle -- they are not global
+ * operations. */
+typedef struct mlx_compile_cache_ {
+  void* ctx; /* heap-allocated std::weak_ptr<CompileCache> */
+} mlx_compile_cache;
+mlx_compile_cache mlx_compile_cache_current(void);
+int mlx_compile_cache_free(mlx_compile_cache cache);
 typedef enum mlx_compile_mode_ {
   MLX_COMPILE_MODE_DISABLED,
   MLX_COMPILE_MODE_NO_SIMPLIFY,
@@ -43,8 +53,8 @@ int mlx_detail_compile(
     bool shapeless,
     const uint64_t* constants,
     size_t constants_num);
-int mlx_detail_compile_clear_cache(void);
-int mlx_detail_compile_erase(uintptr_t fun_id);
+int mlx_detail_compile_clear_cache(mlx_compile_cache cache);
+int mlx_detail_compile_erase(mlx_compile_cache cache, uintptr_t fun_id);
 int mlx_disable_compile(void);
 int mlx_enable_compile(void);
 int mlx_set_compile_mode(mlx_compile_mode mode);

@@ -8,6 +8,35 @@
 #include "mlx/c/private/mlx.h"
 #include "mlx/compile_impl.h"
 
+std::weak_ptr<mlx::core::detail::CompileCache>& mlx_compile_cache_weakptr_get_(
+    mlx_compile_cache cache) {
+  if (!cache.ctx) {
+    throw std::runtime_error("expected a live mlx_compile_cache");
+  }
+  return *static_cast<std::weak_ptr<mlx::core::detail::CompileCache>*>(
+      cache.ctx);
+}
+
+extern "C" mlx_compile_cache mlx_compile_cache_current(void) {
+  try {
+    return mlx_compile_cache{new std::weak_ptr<mlx::core::detail::CompileCache>(
+        mlx::core::detail::compile_cache())};
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+  }
+  return {nullptr};
+}
+
+extern "C" int mlx_compile_cache_free(mlx_compile_cache cache) {
+  try {
+    delete static_cast<std::weak_ptr<mlx::core::detail::CompileCache>*>(
+        cache.ctx);
+    return 0;
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+}
 extern "C" int
 mlx_compile(mlx_closure* res, const mlx_closure fun, bool shapeless) {
   try {
@@ -40,18 +69,22 @@ extern "C" int mlx_detail_compile(
   }
   return 0;
 }
-extern "C" int mlx_detail_compile_clear_cache(void) {
+extern "C" int mlx_detail_compile_clear_cache(mlx_compile_cache cache) {
   try {
-    mlx::core::detail::compile_clear_cache();
+    mlx::core::detail::compile_clear_cache(
+        mlx_compile_cache_weakptr_get_(cache));
   } catch (std::exception& e) {
     mlx_error(e.what());
     return 1;
   }
   return 0;
 }
-extern "C" int mlx_detail_compile_erase(uintptr_t fun_id) {
+extern "C" int mlx_detail_compile_erase(
+    mlx_compile_cache cache,
+    uintptr_t fun_id) {
   try {
-    mlx::core::detail::compile_erase(fun_id);
+    mlx::core::detail::compile_erase(
+        mlx_compile_cache_weakptr_get_(cache), fun_id);
   } catch (std::exception& e) {
     mlx_error(e.what());
     return 1;
