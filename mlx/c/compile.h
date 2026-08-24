@@ -45,6 +45,9 @@ typedef enum mlx_compile_mode_ {
   MLX_COMPILE_MODE_ENABLED
 } mlx_compile_mode;
 
+/**
+ * Compile takes a function and returns a compiled function.
+ */
 int mlx_compile(mlx_closure* res, const mlx_closure fun, bool shapeless);
 int mlx_detail_compile(
     mlx_closure* res,
@@ -55,8 +58,23 @@ int mlx_detail_compile(
     size_t constants_num);
 int mlx_detail_compile_clear_cache(mlx_compile_cache cache);
 int mlx_detail_compile_erase(mlx_compile_cache cache, uintptr_t fun_id);
+
+/**
+ * Globally disable compilation.
+ * Setting the environment variable ``MLX_DISABLE_COMPILE`` can also
+ * be used to disable compilation.
+ */
 int mlx_disable_compile(void);
+
+/**
+ * Globally enable compilation.
+ * This will override the environment variable ``MLX_DISABLE_COMPILE``.
+ */
 int mlx_enable_compile(void);
+
+/**
+ * Set the compiler mode to the given value.
+ */
 int mlx_set_compile_mode(mlx_compile_mode mode);
 
 /**@}*/

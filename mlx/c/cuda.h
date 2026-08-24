@@ -28,6 +28,9 @@ extern "C" {
  */
 /**@{*/
 
+/**
+ * Report whether CUDA support is available.
+ */
 int mlx_cuda_is_available(bool* res);
 
 /**@}*/

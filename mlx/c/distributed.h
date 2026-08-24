@@ -28,26 +28,45 @@ extern "C" {
  */
 /**@{*/
 
+/**
+ * Gather arrays from all ranks in the group.
+ */
 int mlx_distributed_all_gather(
     mlx_array* res,
     const mlx_array x,
     const mlx_distributed_group group /* may be null */,
     const mlx_stream S);
+
+/**
+ * Compute the element-wise maximum across all ranks in the group.
+ */
 int mlx_distributed_all_max(
     mlx_array* res,
     const mlx_array x,
     const mlx_distributed_group group /* may be null */,
     const mlx_stream s);
+
+/**
+ * Compute the element-wise minimum across all ranks in the group.
+ */
 int mlx_distributed_all_min(
     mlx_array* res,
     const mlx_array x,
     const mlx_distributed_group group /* may be null */,
     const mlx_stream s);
+
+/**
+ * Compute the element-wise sum across all ranks in the group.
+ */
 int mlx_distributed_all_sum(
     mlx_array* res,
     const mlx_array x,
     const mlx_distributed_group group /* may be null */,
     const mlx_stream s);
+
+/**
+ * Receive an array with the given shape and dtype from a source rank.
+ */
 int mlx_distributed_recv(
     mlx_array* res,
     const int* shape,
@@ -56,18 +75,30 @@ int mlx_distributed_recv(
     int src,
     const mlx_distributed_group group /* may be null */,
     const mlx_stream s);
+
+/**
+ * Receive an array shaped and typed like the input from a source rank.
+ */
 int mlx_distributed_recv_like(
     mlx_array* res,
     const mlx_array x,
     int src,
     const mlx_distributed_group group /* may be null */,
     const mlx_stream s);
+
+/**
+ * Send an array to a destination rank.
+ */
 int mlx_distributed_send(
     mlx_array* res,
     const mlx_array x,
     int dst,
     const mlx_distributed_group group /* may be null */,
     const mlx_stream s);
+
+/**
+ * Sum arrays across the group and scatter the result by rank.
+ */
 int mlx_distributed_sum_scatter(
     mlx_array* res,
     const mlx_array x,
