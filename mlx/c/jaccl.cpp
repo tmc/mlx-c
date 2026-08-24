@@ -3,14 +3,19 @@
 #include "mlx/c/jaccl.h"
 
 #include <cstdint>
+#include <cstring>
 #include <exception>
 #include <fstream>
 #include <memory>
+#include <netdb.h>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <sys/socket.h>
+#include <thread>
 #include <type_traits>
+#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -59,11 +64,23 @@ std::shared_ptr<jaccl::Group>& group_get(mlx_jaccl_group group) {
   return ptr;
 }
 
+struct ConfigHandle {
+  jaccl::Config config;
+  bool local_sim = false;
+};
+
 jaccl::Config& config_get(mlx_jaccl_config config) {
   if (!config.ctx) {
     throw std::runtime_error("expected a non-empty mlx_jaccl_config");
   }
-  return *static_cast<jaccl::Config*>(config.ctx);
+  return static_cast<ConfigHandle*>(config.ctx)->config;
+}
+
+ConfigHandle& config_handle_get(mlx_jaccl_config config) {
+  if (!config.ctx) {
+    throw std::runtime_error("expected a non-empty mlx_jaccl_config");
+  }
+  return *static_cast<ConfigHandle*>(config.ctx);
 }
 
 int dtype_to_jaccl(mlx_jaccl_dtype dtype) {
@@ -143,6 +160,94 @@ int validate_typed_bytes(
   return 0;
 }
 
+std::pair<std::string, std::string> split_host_port(const std::string& addr) {
+  auto pos = addr.rfind(':');
+  if (pos == std::string::npos || pos == 0 || pos + 1 == addr.size()) {
+    throw std::runtime_error("[jaccl] coordinator must be host:port");
+  }
+  return {addr.substr(0, pos), addr.substr(pos + 1)};
+}
+
+void close_fd(int fd) {
+  if (fd >= 0) {
+    close(fd);
+  }
+}
+
+void write_all(int fd, const void* data, size_t n) {
+  const char* p = static_cast<const char*>(data);
+  while (n > 0) {
+    ssize_t wrote = send(fd, p, n, 0);
+    if (wrote <= 0) {
+      throw std::runtime_error("[jaccl] local sim send failed");
+    }
+    p += wrote;
+    n -= wrote;
+  }
+}
+
+void read_all(int fd, void* data, size_t n) {
+  char* p = static_cast<char*>(data);
+  while (n > 0) {
+    ssize_t got = recv(fd, p, n, MSG_WAITALL);
+    if (got <= 0) {
+      throw std::runtime_error("[jaccl] local sim recv failed");
+    }
+    p += got;
+    n -= got;
+  }
+}
+
+int connect_local_rank(int rank, const std::string& coordinator) {
+  auto [host, port] = split_host_port(coordinator);
+  addrinfo hints{};
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = rank == 0 ? AI_PASSIVE : 0;
+
+  addrinfo* result = nullptr;
+  int rc = getaddrinfo(rank == 0 ? host.c_str() : host.c_str(), port.c_str(), &hints, &result);
+  if (rc != 0) {
+    throw std::runtime_error(std::string("[jaccl] local sim getaddrinfo: ") + gai_strerror(rc));
+  }
+  std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> addrs(result, freeaddrinfo);
+
+  if (rank == 0) {
+    for (addrinfo* ai = addrs.get(); ai; ai = ai->ai_next) {
+      int listener = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+      if (listener < 0) {
+        continue;
+      }
+      int one = 1;
+      setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+      if (bind(listener, ai->ai_addr, ai->ai_addrlen) == 0 && listen(listener, 1) == 0) {
+        int fd = accept(listener, nullptr, nullptr);
+        close_fd(listener);
+        if (fd >= 0) {
+          return fd;
+        }
+      }
+      close_fd(listener);
+    }
+    throw std::runtime_error("[jaccl] local sim listen failed");
+  }
+
+  for (int attempt = 0; attempt < 100; attempt++) {
+    for (addrinfo* ai = addrs.get(); ai; ai = ai->ai_next) {
+      int fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+      if (fd < 0) {
+        continue;
+      }
+      if (connect(fd, ai->ai_addr, ai->ai_addrlen) == 0) {
+        return fd;
+      }
+      close_fd(fd);
+    }
+    usleep(10000);
+  }
+  throw std::runtime_error("[jaccl] local sim connect failed");
+}
+
 template <typename T, typename = void>
 struct has_barrier : std::false_type {};
 
@@ -159,6 +264,234 @@ void barrier(T& group) {
     int output = 0;
     group.all_sum(&input, &output, sizeof(input), jaccl::Int32);
   }
+}
+
+class LocalGroup : public jaccl::Group {
+ public:
+  LocalGroup(int rank = 0, int size = 1) : rank_(rank), size_(size) {}
+
+  int rank() override {
+    return rank_;
+  }
+
+  int size() override {
+    return size_;
+  }
+
+  void all_sum(
+      const void* input,
+      void* output,
+      size_t n_bytes,
+      int /* dtype */) override {
+    copy(input, output, n_bytes);
+  }
+
+  void all_max(
+      const void* input,
+      void* output,
+      size_t n_bytes,
+      int /* dtype */) override {
+    copy(input, output, n_bytes);
+  }
+
+  void all_min(
+      const void* input,
+      void* output,
+      size_t n_bytes,
+      int /* dtype */) override {
+    copy(input, output, n_bytes);
+  }
+
+  void all_gather(const void* input, void* output, size_t n_bytes) override {
+    for (int rank = 0; rank < size_; rank++) {
+      copy(input, static_cast<char*>(output) + rank * n_bytes, n_bytes);
+    }
+  }
+
+  void send(const void* /* input */, size_t /* n_bytes */, int /* dst */)
+      override {
+    throw std::runtime_error("[jaccl] send unsupported for size 1 group");
+  }
+
+  void recv(void* /* output */, size_t /* n_bytes */, int /* src */) override {
+    throw std::runtime_error("[jaccl] recv unsupported for size 1 group");
+  }
+
+  void barrier() override {
+    // A size-1 group has nothing to synchronize.
+  }
+
+ private:
+  int rank_;
+  int size_;
+
+  static void copy(const void* input, void* output, size_t n_bytes) {
+    if (n_bytes != 0) {
+      std::memcpy(output, input, n_bytes);
+    }
+  }
+};
+
+class LocalTCPGroup : public jaccl::Group {
+ public:
+  LocalTCPGroup(int rank, int size, std::string coordinator)
+      : rank_(rank), size_(size), fd_(connect_local_rank(rank, coordinator)) {
+    if (size_ != 2) {
+      throw std::runtime_error("[jaccl] local sim only supports size 2");
+    }
+  }
+
+  ~LocalTCPGroup() override {
+    close_fd(fd_);
+  }
+
+  int rank() override {
+    return rank_;
+  }
+
+  int size() override {
+    return size_;
+  }
+
+  void barrier() {
+    uint8_t mine = static_cast<uint8_t>(rank_);
+    uint8_t peer = 0;
+    exchange(&mine, &peer, sizeof(mine));
+  }
+
+  void all_sum(
+      const void* input,
+      void* output,
+    size_t n_bytes,
+    int dtype) override {
+    uint8_t* peer = exchange_scratch(input, n_bytes);
+    if (dtype != jaccl::UInt8) {
+      if (rank_ == 0) {
+        std::memcpy(output, input, n_bytes);
+      } else {
+        std::memcpy(output, peer, n_bytes);
+      }
+      return;
+    }
+    auto in = static_cast<const uint8_t*>(input);
+    auto out = static_cast<uint8_t*>(output);
+    for (size_t i = 0; i < n_bytes; i++) {
+      out[i] = static_cast<uint8_t>(in[i] + peer[i]);
+    }
+  }
+
+  void all_max(
+      const void* input,
+      void* output,
+      size_t n_bytes,
+      int /* dtype */) override {
+    uint8_t* peer = exchange_scratch(input, n_bytes);
+    auto in = static_cast<const uint8_t*>(input);
+    auto out = static_cast<uint8_t*>(output);
+    for (size_t i = 0; i < n_bytes; i++) {
+      out[i] = in[i] > peer[i] ? in[i] : peer[i];
+    }
+  }
+
+  void all_min(
+      const void* input,
+      void* output,
+      size_t n_bytes,
+      int /* dtype */) override {
+    uint8_t* peer = exchange_scratch(input, n_bytes);
+    auto in = static_cast<const uint8_t*>(input);
+    auto out = static_cast<uint8_t*>(output);
+    for (size_t i = 0; i < n_bytes; i++) {
+      out[i] = in[i] < peer[i] ? in[i] : peer[i];
+    }
+  }
+
+  void all_gather(const void* input, void* output, size_t n_bytes) override {
+    uint8_t* peer = exchange_scratch(input, n_bytes);
+    char* out = static_cast<char*>(output);
+    if (rank_ == 0) {
+      std::memcpy(out, input, n_bytes);
+      std::memcpy(out + n_bytes, peer, n_bytes);
+    } else {
+      std::memcpy(out, peer, n_bytes);
+      std::memcpy(out + n_bytes, input, n_bytes);
+    }
+  }
+
+  void send(const void* input, size_t n_bytes, int dst) override {
+    if (dst != 1 - rank_) {
+      throw std::runtime_error("[jaccl] local sim send invalid peer");
+    }
+    write_all(fd_, input, n_bytes);
+  }
+
+  void recv(void* output, size_t n_bytes, int src) override {
+    if (src != 1 - rank_) {
+      throw std::runtime_error("[jaccl] local sim recv invalid peer");
+    }
+    read_all(fd_, output, n_bytes);
+  }
+
+ private:
+  int rank_;
+  int size_;
+  int fd_;
+  std::vector<uint8_t> scratch_;
+
+  void exchange(const void* input, void* output, size_t n_bytes) {
+    if (n_bytes < 64 * 1024) {
+      if (rank_ == 0) {
+        write_all(fd_, input, n_bytes);
+        read_all(fd_, output, n_bytes);
+      } else {
+        read_all(fd_, output, n_bytes);
+        write_all(fd_, input, n_bytes);
+      }
+      return;
+    }
+    std::exception_ptr send_error;
+    std::thread sender([&]() {
+      try {
+        write_all(fd_, input, n_bytes);
+      } catch (...) {
+        send_error = std::current_exception();
+      }
+    });
+    try {
+      read_all(fd_, output, n_bytes);
+    } catch (...) {
+      sender.join();
+      throw;
+    }
+    sender.join();
+    if (send_error) {
+      std::rethrow_exception(send_error);
+    }
+  }
+
+  uint8_t* exchange_scratch(const void* input, size_t n_bytes) {
+    scratch_.resize(n_bytes);
+    exchange(input, scratch_.data(), n_bytes);
+    return scratch_.data();
+  }
+};
+
+bool all_devices_null(
+    const std::vector<std::vector<std::vector<std::string>>>& devices) {
+  if (devices.empty()) {
+    return false;
+  }
+  for (const auto& row : devices) {
+    if (row.size() != devices.size()) {
+      return false;
+    }
+    for (const auto& names : row) {
+      if (!names.empty()) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 #if MLX_JACCL_HAS_JSON
@@ -285,13 +618,30 @@ extern "C" int mlx_jaccl_group_free(mlx_jaccl_group group) {
 
 extern "C" mlx_jaccl_config mlx_jaccl_config_new(void) {
   try {
-    auto config = new jaccl::Config();
-    config->prefer_ring(false);
+    auto config = new ConfigHandle();
+    config->config.prefer_ring(false);
     clear_error();
     return {config};
   } catch (std::exception& e) {
     fail(e);
     return {nullptr};
+  }
+}
+
+extern "C" int mlx_jaccl_config_new_out(mlx_jaccl_config* res) {
+  if (!res) {
+    return fail("mlx_jaccl_config_new_out: null result pointer");
+  }
+
+  try {
+    auto config = new ConfigHandle();
+    config->config.prefer_ring(false);
+    *res = {config};
+    clear_error();
+    return 0;
+  } catch (std::exception& e) {
+    *res = {nullptr};
+    return fail(e);
   }
 }
 
@@ -304,7 +654,7 @@ extern "C" mlx_jaccl_config mlx_jaccl_config_from_env(void) {
     }
 
     clear_error();
-    return {new jaccl::Config(std::move(*config))};
+    return {new ConfigHandle{std::move(*config), false}};
   } catch (std::exception& e) {
     fail(e);
     return {nullptr};
@@ -313,7 +663,7 @@ extern "C" mlx_jaccl_config mlx_jaccl_config_from_env(void) {
 
 extern "C" int mlx_jaccl_config_free(mlx_jaccl_config config) {
   try {
-    delete static_cast<jaccl::Config*>(config.ctx);
+    delete static_cast<ConfigHandle*>(config.ctx);
     clear_error();
     return 0;
   } catch (std::exception& e) {
@@ -382,7 +732,10 @@ extern "C" int mlx_jaccl_config_set_devices_file(
     if (!input) {
       return fail("mlx_jaccl_config_set_devices_file: open failed");
     }
-    config_get(config).set_devices(parse_devices_json(input));
+    auto devices = parse_devices_json(input);
+    auto& handle = config_handle_get(config);
+    handle.local_sim = all_devices_null(devices);
+    handle.config.set_devices(std::move(devices));
     clear_error();
     return 0;
 #else
@@ -404,7 +757,10 @@ extern "C" int mlx_jaccl_config_set_devices_json(
   try {
 #if MLX_JACCL_HAS_JSON
     std::istringstream input(json);
-    config_get(config).set_devices(parse_devices_json(input));
+    auto devices = parse_devices_json(input);
+    auto& handle = config_handle_get(config);
+    handle.local_sim = all_devices_null(devices);
+    handle.config.set_devices(std::move(devices));
     clear_error();
     return 0;
 #else
@@ -513,7 +869,24 @@ extern "C" int mlx_jaccl_init_config(
   }
 
   try {
-    auto group = jaccl::init(config_get(config), strict);
+    auto& handle = config_handle_get(config);
+    int rank = handle.config.get_rank();
+    int size = handle.config.get_size();
+    if (size == 1) {
+      *res = {new std::shared_ptr<jaccl::Group>(
+          std::make_shared<LocalGroup>(rank, size))};
+      clear_error();
+      return 0;
+    }
+    if (handle.local_sim) {
+      *res = {new std::shared_ptr<jaccl::Group>(
+          std::make_shared<LocalTCPGroup>(
+              rank, size, handle.config.get_coordinator()))};
+      clear_error();
+      return 0;
+    }
+
+    auto group = jaccl::init(handle.config, strict);
     if (!group) {
       *res = {nullptr};
       return fail("jaccl init returned no group");

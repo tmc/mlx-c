@@ -109,6 +109,12 @@ items:
     doc: Create a configuration.
     signature: "mlx_jaccl_config mlx_jaccl_config_new(void)"
   - kind: function
+    name: mlx_jaccl_config_new_out
+    action: handwritten
+    reason: runtime_lifetime
+    doc: Create a configuration and store it in res.
+    signature: "int mlx_jaccl_config_new_out(mlx_jaccl_config* res)"
+  - kind: function
     name: mlx_jaccl_config_from_env
     action: handwritten
     reason: runtime_config
