@@ -1,0 +1,44 @@
+# Declared removals from the API lock.
+#
+# Regeneration is free to grow the surface but may not shrink it silently: a
+# function that the previously committed codegen/mlxc-capi.lock.json recorded
+# and that a regeneration no longer emits must be listed here, with why it went
+# and what happens next. An entry naming a function that is still present is
+# stale and fails the gate.
+#
+# The baseline is the lock at the git ref given by --baseline-ref (HEAD by
+# default), not the working-tree file: by the time the gate runs, regeneration
+# has already rewritten the working tree.
+
+schema_version: 1
+
+removals:
+  - target: mlxc
+    name: mlx_count_nonzero_axis
+    reason: >-
+      Renamed during the upstream-parity heal: the (axis, keepdims) overload
+      now binds under the base name mlx_count_nonzero to match
+      upstream/mlx-v0.32.0, which is what a consumer calling the shared name
+      links against.
+    resolution: >-
+      Consumers regenerate; the symbol is not lost — it is the base name now.
+      The bare-keepdims overload binds additively as
+      mlx_count_nonzero_keepdims.
+  - target: mlxc
+    name: mlx_flip_axes
+    reason: >-
+      Renamed during the upstream-parity heal: the axes-vector overload now
+      binds under the base name mlx_flip to match upstream/mlx-v0.32.0. On
+      the previous line the base name held the no-axes overload, which broke
+      an upstream consumer at link time.
+    resolution: >-
+      Consumers regenerate; the axes form is the base name, the axis form
+      stays mlx_flip_axis, and the bare form binds as mlx_flip_all.
+  - target: mlxc
+    name: mlx_unstack_axis
+    reason: >-
+      Renamed during the upstream-parity heal: the axis overload now binds
+      under the base name mlx_unstack to match upstream/mlx-v0.32.0.
+    resolution: >-
+      Consumers regenerate; the axis form is the base name and the bare form
+      binds as mlx_unstack_all.
