@@ -215,6 +215,10 @@ variant_mappings:
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
     astype:
+      - signature: "array(array, Dtype, std::optional<bool>, StreamOrDevice)"
+        skip: true
+        optional: true
+        reason: covered_by_other_variant
       - signature: "array(array, Dtype, StreamOrDevice)"
         suffix: ""
         doc: Cast an array to a dtype, using MLX's default copy behavior.
@@ -656,6 +660,7 @@ variant_mappings:
     linspace:
       - signature: "array(double, double, int, bool, Dtype, StreamOrDevice)"
         suffix: "endpoint"
+        optional: true
       - signature: "array(double, double, int, Dtype, StreamOrDevice)"
         suffix: ""
     log:
@@ -786,6 +791,7 @@ variant_mappings:
     ones_like:
       - signature: "array(array, Dtype, StreamOrDevice)"
         suffix: "dtype"
+        optional: true
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
         doc: Return an array of ones with the same shape and dtype as the input.
@@ -1245,6 +1251,7 @@ variant_mappings:
     zeros_like:
       - signature: "array(array, Dtype, StreamOrDevice)"
         suffix: "dtype"
+        optional: true
       - signature: "array(array, StreamOrDevice)"
         suffix: ""
         doc: Return an array of zeros with the same shape and dtype as the input.

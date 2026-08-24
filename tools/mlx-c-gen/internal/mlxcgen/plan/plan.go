@@ -106,8 +106,11 @@ type Variant struct {
 	Signature string  `yaml:"signature"`
 	Suffix    *string `yaml:"suffix,omitempty"`
 	Skip      bool    `yaml:"skip,omitempty"`
-	Reason    string  `yaml:"reason,omitempty" json:"reason,omitempty"`
-	Doc       string  `yaml:"doc,omitempty"`
+	// Optional tolerates the overload being absent from the parsed headers,
+	// for signatures whose presence varies across supported MLX versions.
+	Optional bool   `yaml:"optional,omitempty"`
+	Reason   string `yaml:"reason,omitempty" json:"reason,omitempty"`
+	Doc      string `yaml:"doc,omitempty"`
 }
 
 // variantSkipReasons is the closed vocabulary for skip reasons.
@@ -125,6 +128,7 @@ var variantSkipReasons = map[string]bool{
 	"name_collision":           true,
 	"template_function":        true,
 	"unbindable_signature":     true,
+	"version_skew":             true,
 	"unstable_upstream_api":    true,
 	"unsupported_type":         true,
 }
@@ -648,6 +652,7 @@ func copyVariants(in []Variant) []Variant {
 		out[i] = Variant{
 			Signature: variant.Signature,
 			Skip:      variant.Skip,
+			Optional:  variant.Optional,
 			Reason:    variant.Reason,
 			Doc:       variant.Doc,
 		}

@@ -69,6 +69,8 @@ type variantPolicy struct {
 }
 
 type variantRule struct {
+	optional bool
+
 	suffix VariantSuffix
 	index  int
 	doc    string
@@ -133,10 +135,11 @@ func variantRulesFromManifest(in []plan.Variant) map[string]variantRule {
 			suffix = &s
 		}
 		out[variant.Signature] = variantRule{
-			suffix: suffix,
-			index:  index,
-			doc:    variant.Doc,
-			reason: variant.Reason,
+			suffix:   suffix,
+			index:    index,
+			doc:      variant.Doc,
+			reason:   variant.Reason,
+			optional: variant.Optional,
 		}
 		if !variant.Skip {
 			index++
@@ -238,8 +241,13 @@ func selectVariantsWithPolicy(policy variantPolicy, namespace, name string, defs
 		d.VariantIndex = rule.index
 		result = append(result, d)
 	}
-	if len(seen) != len(funcVariants) {
-		return nil, nil, missingSignatureError(namespace, name, seen, funcVariants)
+	for signature, rule := range funcVariants {
+		// Optional rules describe overloads whose presence varies across
+		// supported MLX versions: bind or skip when present, tolerate when
+		// absent.
+		if !seen[signature] && !rule.optional {
+			return nil, nil, missingSignatureError(namespace, name, seen, funcVariants)
+		}
 	}
 
 	return result, diagnostics, nil
