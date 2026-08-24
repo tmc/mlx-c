@@ -5,6 +5,7 @@
 
 #include "mlx/c/array.h"
 #include "mlx/c/compile.h"
+#include "mlx/c/fast.h"
 #include "mlx/c/fft.h"
 #include "mlx/mlx.h"
 
@@ -122,6 +123,18 @@ inline mlx::core::fft::FFTNorm mlx_fft_norm_to_cpp(mlx_fft_norm norm) {
       mlx::core::fft::FFTNorm::Ortho,
       mlx::core::fft::FFTNorm::Forward};
   return map[(int)norm];
+}
+
+MLX_ENUM_ASSERT(MLX_MATH_MODE_SAFE, mlx::core::MathMode::Safe);
+MLX_ENUM_ASSERT(MLX_MATH_MODE_RELAXED, mlx::core::MathMode::Relaxed);
+MLX_ENUM_ASSERT(MLX_MATH_MODE_FAST, mlx::core::MathMode::Fast);
+
+inline mlx::core::MathMode mlx_math_mode_to_cpp(mlx_math_mode mode) {
+  static mlx::core::MathMode map[] = {
+      mlx::core::MathMode::Safe,
+      mlx::core::MathMode::Relaxed,
+      mlx::core::MathMode::Fast};
+  return map[(int)mode];
 }
 
 #undef MLX_ENUM_ASSERT
