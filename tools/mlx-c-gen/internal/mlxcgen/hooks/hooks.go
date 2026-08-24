@@ -13,12 +13,12 @@ type Hook func(w io.Writer, funcName string, impl bool) bool
 
 // hooks maps function names to their special handlers.
 var hooks = map[string]Hook{
-	"mlx_export_to_dot":              mlxExportToDot,
-	"mlx_fast_metal_kernel":          mlxFastMetalKernel,
-	"mlx_fast_cuda_kernel":           mlxFastCudaKernel,
-	"mlx_load_gguf":                  mlxLoadGGUF,
-	"mlx_print_graph":                mlxPrintGraph,
-	"mlx_save_gguf":                  mlxSaveGGUF,
+	"mlx_export_to_dot":     mlxExportToDot,
+	"mlx_fast_metal_kernel": mlxFastMetalKernel,
+	"mlx_fast_cuda_kernel":  mlxFastCudaKernel,
+	"mlx_load_gguf":         mlxLoadGGUF,
+	"mlx_print_graph":       mlxPrintGraph,
+	"mlx_save_gguf":         mlxSaveGGUF,
 }
 
 // GetHook returns the hook for a function name, or nil if none exists.

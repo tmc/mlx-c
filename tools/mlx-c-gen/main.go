@@ -67,6 +67,8 @@ func main() {
 		err = runParity(os.Args[2:])
 	case "revisions":
 		err = runRevisions(os.Args[2:])
+	case "coverage":
+		err = runCoverage(os.Args[2:])
 	case "-h", "-help", "--help":
 		usage()
 		return
@@ -92,6 +94,7 @@ func usage() {
   mlx-c-gen lock [flags]              regenerate/verify the API lock (-check)
   mlx-c-gen parity --upstream-headers DIR   shared-symbol parity gate
   mlx-c-gen revisions <root> --base REF     release revision progression
+  mlx-c-gen coverage <root> [flags]   MLX_API symbols without bindings
 
 <root> names the INPUT tree: the checkout whose codegen/ directory holds
 everything that drives generation.
@@ -107,7 +110,9 @@ When --out is omitted, generate writes to <root>/mlx/c. check verifies
 <root>/mlx/c against <root>/codegen by default; pass --outputs DIR to verify
 another checkout's copies instead. Inputs are never read from the current
 directory or the environment; the MLX C++ source comes from --mlx-src or
-from <root>/codegen/mlx-src.path.`)
+from <root>/codegen/mlx-src.path.
+
+Run 'mlx-c-gen <verb> -h' for that verb's flags.`)
 }
 
 // takeRoot extracts the required <root> positional argument, which must be

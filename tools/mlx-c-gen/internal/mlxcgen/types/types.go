@@ -322,7 +322,7 @@ func (r *Registry) registerAll() {
 			"const CompileCacheWeakPtr &",
 			"std::weak_ptr<mlx::core::CompileCache>",
 		},
-		CToCpp:  func(s string) string { return "mlx_compile_cache_weakptr_get_(" + s + ")" },
+		CToCpp: func(s string) string { return "mlx_compile_cache_weakptr_get_(" + s + ")" },
 		CArg: func(s string) string {
 			if s == "" {
 				return "mlx_compile_cache"
