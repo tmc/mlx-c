@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -1210,26 +1211,99 @@ func extractDoc(node *clangNode) string {
 			continue
 		}
 		for _, commentPart := range inner.Inner {
-			if commentPart.Kind != "ParagraphComment" {
-				continue
-			}
-			for _, textPart := range commentPart.Inner {
-				if textPart.Kind != "TextComment" {
-					continue
+			switch commentPart.Kind {
+			case "ParagraphComment":
+				for _, textPart := range commentPart.Inner {
+					if textPart.Kind != "TextComment" {
+						continue
+					}
+					start := -1
+					if textPart.Loc != nil {
+						start = textPart.Loc.Offset
+					}
+					part(textPart.Text, start)
 				}
-				start := -1
-				if textPart.Loc != nil {
-					start = textPart.Loc.Offset
+			case "VerbatimBlockComment":
+				// @code/@endcode blocks: flush pending text so the sanitizer
+				// sees the block boundary, then keep or drop the block.
+				var lines []string
+				cpp := false
+				for _, line := range commentPart.Inner {
+					if line.Kind != "VerbatimBlockLineComment" {
+						continue
+					}
+					if cppOnlyTokenRE.MatchString(line.Text) {
+						cpp = true
+					}
+					lines = append(lines, strings.TrimSpace(line.Text))
 				}
-				part(textPart.Text, start)
+				docs = append(docs, "") // block boundary marker
+				if cpp {
+					docs = append(docs, docCodeOmittedSentinel)
+				} else {
+					docs = append(docs, lines...)
+				}
 			}
 		}
 	}
 	for i, d := range docs {
 		docs[i] = strings.TrimSpace(d)
 	}
-	return strings.Join(docs, "\n")
+	return sanitizeDocLines(docs)
+}
 
+// C++-only tokens whose presence makes a @code block unusable in a C header.
+var cppOnlyTokenRE = regexp.MustCompile(
+	`\bauto\s|std::|->|::|array\{|vector\{|new\b|\.c_str\(\)`)
+
+const docCodeOmittedSentinel = "\x00"
+
+// sanitizeDocLines mirrors the ratified doc-comment cleanup: drop C++ code
+// blocks in favor of a single visible note (merging consecutive notes),
+// remove dangling lead-in lines ending in ':' above omitted blocks, and
+// collapse blank runs.
+func sanitizeDocLines(lines []string) string {
+	var out []string
+	pendingNote := false
+	for _, ln := range lines {
+		if pendingNote {
+			if ln == "" || (!strings.HasSuffix(strings.TrimSpace(ln), ":")) {
+				if strings.TrimSpace(ln) != "" {
+					pendingNote = false
+				}
+			} else {
+				continue // follow-on lead-in like "will produce:" after a note
+			}
+		}
+		if ln == docCodeOmittedSentinel {
+			for len(out) > 0 && out[len(out)-1] == "" {
+				out = out[:len(out)-1]
+			}
+			if n := len(out); n > 0 && strings.HasSuffix(out[n-1], ":") {
+				out = out[:n-1]
+				for len(out) > 0 && out[len(out)-1] == "" {
+					out = out[:len(out)-1]
+				}
+			}
+			note := "Code example omitted: written in C++."
+			if len(out) == 0 || out[len(out)-1] != note {
+				if len(out) > 0 && out[len(out)-1] != "" {
+					out = append(out, "")
+				}
+				out = append(out, note)
+			}
+			pendingNote = true
+			continue
+		}
+		if ln == "" && len(out) > 0 && out[len(out)-1] == "" {
+			continue
+		}
+		out = append(out, ln)
+	}
+	for len(out) > 0 && out[len(out)-1] == "" {
+		out = out[:len(out)-1]
+	}
+	return strings.Join(out, "\n")
 }
 
 // isTemplateFunction returns true if the function has template type parameters.
