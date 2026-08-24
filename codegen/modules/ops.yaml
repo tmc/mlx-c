@@ -1,0 +1,5 @@
+name: ops
+headers:
+  - mlx/ops.h
+  - mlx/einsum.h
+doc: Core array operations

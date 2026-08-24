@@ -1,0 +1,84 @@
+# MLX C generated-file inventory.
+#
+# Format:
+#   <kind> <target> <path>
+#
+# Kinds:
+#   generated_header_api   direct wrappers generated from upstream MLX C++ headers
+#   generated_support      generated support scaffolding not discovered from C++ headers
+#   custom_spec_generated  repetitive custom support that should move to specs/templates
+#   handwritten_runtime    behavior that remains handwritten unless proven mechanical
+#   not_owned_by_codegen   umbrella or compatibility files outside generator ownership
+
+custom_spec_generated mlxc mlx/c/array.h
+handwritten_runtime mlxc mlx/c/array.cpp
+generated_support mlxc mlx/c/closure.h
+generated_support mlxc mlx/c/closure.cpp
+generated_header_api mlxc mlx/c/compile.h
+generated_header_api mlxc mlx/c/compile.cpp
+not_owned_by_codegen mlxc mlx/c/config.h
+generated_header_api mlxc mlx/c/cuda.h
+generated_header_api mlxc mlx/c/cuda.cpp
+custom_spec_generated mlxc mlx/c/device.h
+handwritten_runtime mlxc mlx/c/device.cpp
+generated_header_api mlxc mlx/c/distributed.h
+generated_header_api mlxc mlx/c/distributed.cpp
+custom_spec_generated mlxc mlx/c/distributed_group.h
+handwritten_runtime mlxc mlx/c/distributed_group.cpp
+handwritten_runtime mlxc mlx/c/error.h
+handwritten_runtime mlxc mlx/c/error.cpp
+custom_spec_generated mlxc mlx/c/export.h
+handwritten_runtime mlxc mlx/c/export.cpp
+generated_header_api mlxc mlx/c/fast.h
+generated_header_api mlxc mlx/c/fast.cpp
+generated_header_api mlxc mlx/c/fft.h
+generated_header_api mlxc mlx/c/fft.cpp
+generated_header_api mlxc mlx/c/graph_utils.h
+generated_header_api mlxc mlx/c/graph_utils.cpp
+not_owned_by_codegen mlxc mlx/c/half.h
+generated_header_api mlxc mlx/c/io.h
+generated_header_api mlxc mlx/c/io.cpp
+handwritten_runtime mlxc mlx/c/io_types.h
+handwritten_runtime mlxc mlx/c/io_types.cpp
+custom_spec_generated jacclc mlx/c/jaccl.h
+handwritten_runtime jacclc mlx/c/jaccl.cpp
+generated_header_api mlxc mlx/c/linalg.h
+generated_header_api mlxc mlx/c/linalg.cpp
+generated_support mlxc mlx/c/map.h
+generated_support mlxc mlx/c/map.cpp
+generated_header_api mlxc mlx/c/memory.h
+generated_header_api mlxc mlx/c/memory.cpp
+generated_header_api mlxc mlx/c/metal.h
+generated_header_api mlxc mlx/c/metal.cpp
+not_owned_by_codegen mlxc mlx/c/mlx.h
+generated_header_api mlxc mlx/c/ops.h
+generated_header_api mlxc mlx/c/ops.cpp
+custom_spec_generated mlxc mlx/c/optional.h
+custom_spec_generated mlxc mlx/c/private/array.h
+generated_support mlxc mlx/c/private/closure.h
+custom_spec_generated mlxc mlx/c/private/device.h
+custom_spec_generated mlxc mlx/c/private/distributed_group.h
+custom_spec_generated mlxc mlx/c/private/enums.h
+custom_spec_generated mlxc mlx/c/private/export.h
+custom_spec_generated mlxc mlx/c/private/gguf.h
+custom_spec_generated mlxc mlx/c/private/graph_utils.h
+handwritten_runtime mlxc mlx/c/private/io.h
+generated_support mlxc mlx/c/private/map.h
+not_owned_by_codegen mlxc mlx/c/private/mlx.h
+custom_spec_generated mlxc mlx/c/private/stream.h
+custom_spec_generated mlxc mlx/c/private/string.h
+generated_support mlxc mlx/c/private/vector.h
+generated_header_api mlxc mlx/c/random.h
+generated_header_api mlxc mlx/c/random.cpp
+custom_spec_generated mlxc mlx/c/stream.h
+handwritten_runtime mlxc mlx/c/stream.cpp
+custom_spec_generated mlxc mlx/c/string.h
+handwritten_runtime mlxc mlx/c/string.cpp
+generated_header_api mlxc mlx/c/transforms.h
+generated_header_api mlxc mlx/c/transforms.cpp
+generated_header_api mlxc mlx/c/transforms_impl.h
+generated_header_api mlxc mlx/c/transforms_impl.cpp
+generated_support mlxc mlx/c/vector.h
+generated_support mlxc mlx/c/vector.cpp
+custom_spec_generated mlxc mlx/c/version.h
+handwritten_runtime mlxc mlx/c/version.cpp

@@ -1,0 +1,4 @@
+name: cuda
+headers:
+  - mlx/backend/cuda/cuda.h
+doc: Cuda specific operations

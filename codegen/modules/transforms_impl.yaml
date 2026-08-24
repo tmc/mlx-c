@@ -1,0 +1,7 @@
+name: transforms_impl
+headers:
+  - mlx/transforms_impl.h
+doc: Implementation detail operations
+pre_includes:
+  - mlx/array.h
+  - mlx/transforms.h

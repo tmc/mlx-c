@@ -1,0 +1,1644 @@
+schema_version: 1
+
+mlx:
+  expected_git_ref: v0.32.0
+
+report:
+  require_clean_generated: true
+  require_api_lock: true
+  require_doc_coverage: true
+  require_type_coverage: true
+  require_diagnostic_reasons: true
+  require_explicit_variants: true
+  require_decision_decl_ids: true
+  require_decision_coverage: true
+  require_emit_api_lock: true
+  require_unique_c_names: true
+  include_inventory: true
+
+generated_markers:
+  forbid_volatile_data: true
+
+module_files:
+  - modules/ops.yaml
+  - modules/linalg.yaml
+  - modules/random.yaml
+  - modules/fft.yaml
+  - modules/fast.yaml
+  - modules/io.yaml
+  - modules/compile.yaml
+  - modules/transforms.yaml
+  - modules/transforms_impl.yaml
+  - modules/memory.yaml
+  - modules/metal.yaml
+  - modules/cuda.yaml
+  - modules/graph_utils.yaml
+  - modules/distributed.yaml
+
+standalone:
+  - vector
+  - closure
+  - map
+
+custom_hooks:
+  - c_name: mlx_fast_cuda_kernel
+    reason: custom CUDA kernel API
+  - c_name: mlx_fast_metal_kernel
+    reason: custom Metal kernel API
+  - c_name: mlx_load_gguf
+    reason: custom GGUF loading API
+  - c_name: mlx_save_gguf
+    reason: custom GGUF saving API
+
+hook_api:
+  - c_name: mlx_export_to_dot
+    names:
+      - mlx_node_namer
+      - mlx_node_namer_new
+      - mlx_node_namer_free
+      - mlx_node_namer_set_name
+      - mlx_node_namer_get_name
+      - mlx_export_to_dot
+  - c_name: mlx_fast_cuda_kernel
+    names:
+      - mlx_fast_cuda_kernel_config
+      - mlx_fast_cuda_kernel_config_new
+      - mlx_fast_cuda_kernel_config_free
+      - mlx_fast_cuda_kernel_config_add_output_arg
+      - mlx_fast_cuda_kernel_config_set_grid
+      - mlx_fast_cuda_kernel_config_set_thread_group
+      - mlx_fast_cuda_kernel_config_set_init_value
+      - mlx_fast_cuda_kernel_config_set_verbose
+      - mlx_fast_cuda_kernel_config_add_template_arg_dtype
+      - mlx_fast_cuda_kernel_config_add_template_arg_int
+      - mlx_fast_cuda_kernel_config_add_template_arg_bool
+      - mlx_fast_cuda_kernel
+      - mlx_fast_cuda_kernel_new
+      - mlx_fast_cuda_kernel_free
+      - mlx_fast_cuda_kernel_apply
+  - c_name: mlx_fast_metal_kernel
+    names:
+      - mlx_fast_metal_kernel_config
+      - mlx_fast_metal_kernel_config_new
+      - mlx_fast_metal_kernel_config_free
+      - mlx_fast_metal_kernel_config_add_output_arg
+      - mlx_fast_metal_kernel_config_set_grid
+      - mlx_fast_metal_kernel_config_set_thread_group
+      - mlx_fast_metal_kernel_config_set_init_value
+      - mlx_fast_metal_kernel_config_set_verbose
+      - mlx_fast_metal_kernel_config_add_template_arg_dtype
+      - mlx_fast_metal_kernel_config_add_template_arg_int
+      - mlx_fast_metal_kernel_config_add_template_arg_bool
+      - mlx_fast_metal_kernel
+      - mlx_fast_metal_kernel_new
+      - mlx_fast_metal_kernel_free
+      - mlx_fast_metal_kernel_apply
+  - c_name: mlx_load_gguf
+    names:
+      - mlx_load_gguf
+  - c_name: mlx_print_graph
+    names:
+      - mlx_print_graph
+  - c_name: mlx_save_gguf
+    names:
+      - mlx_save_gguf
+
+variant_mappings:
+  mlx_core:
+    abs:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    add:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    addmm:
+      - signature: "array(array, array, array, float, float, StreamOrDevice)"
+        suffix: ""
+    all:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    allclose:
+      - signature: "array(array, array, double, double, bool, StreamOrDevice)"
+        suffix: ""
+    any:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    arccos:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    arccosh:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    arange:
+      - signature: "array(double, double, double, Dtype, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(double, double, double, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(double, double, Dtype, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(int, int, int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(double, double, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(double, Dtype, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(int, int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(double, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    arcsin:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    arcsinh:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    arctan:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    arctan2:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    arctanh:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    as_strided:
+      - signature: "array(array, Shape, Strides, size_t, StreamOrDevice)"
+        suffix: ""
+    argmax:
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    argmin:
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    argpartition:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: ""
+    argsort:
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    astype:
+      - signature: "array(array, Dtype, std::optional<bool>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, Dtype, StreamOrDevice)"
+        suffix: ""
+        doc: Cast an array to a dtype, using MLX's default copy behavior.
+    array_equal:
+      - signature: "array(array, array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    async_eval:
+      - signature: "void(std::vector<array>)"
+        suffix: ""
+        doc: Evaluate the arrays asynchronously.
+      - signature: "void(Arrays&&...)"
+        skip: true
+        reason: excluded_by_policy
+    atleast_1d:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+      - signature: "std::vector<array>(std::vector<array>, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    atleast_2d:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return a view of the input with at least two dimensions.
+      - signature: "std::vector<array>(std::vector<array>, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    atleast_3d:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return a view of the input with at least three dimensions.
+      - signature: "std::vector<array>(std::vector<array>, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    bartlett:
+      - signature: "array(int, StreamOrDevice)"
+        suffix: ""
+    bitwise_and:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    bitwise_invert:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    bitwise_or:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    bitwise_xor:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    blackman:
+      - signature: "array(int, StreamOrDevice)"
+        suffix: ""
+    block_masked_mm:
+      - signature: "array(array, array, int, std::optional<array>, std::optional<array>, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+    broadcast_arrays:
+      - signature: "std::vector<array>(std::vector<array>, StreamOrDevice)"
+        suffix: ""
+    broadcast_to:
+      - signature: "array(array, Shape, StreamOrDevice)"
+        suffix: ""
+    ceil:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    clip:
+      - signature: "array(array, std::optional<array>, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+    clear_cache:
+      - signature: "void()"
+        suffix: ""
+        doc: Clear the memory cache.
+    checkpoint:
+      - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<std::vector<array>(const std::vector<array>&)>)"
+        suffix: ""
+    compile:
+      - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<std::vector<array>(const std::vector<array>&)>, bool)"
+        suffix: ""
+      - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::vector<array>(*)(const std::vector<array>&), bool)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "std::function<std::vector<array>(const std::vector<array>&)>(F&, bool)"
+        skip: true
+        reason: template_function
+    concatenate:
+      - signature: "array(std::vector<array>, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(std::vector<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Concatenate arrays along the first axis.
+    conv1d:
+      - signature: "array(array, array, int, int, int, int, StreamOrDevice)"
+        suffix: ""
+    conv2d:
+      - signature: "array(array, array, std::pair<int, int>, std::pair<int, int>, std::pair<int, int>, int, StreamOrDevice)"
+        suffix: ""
+    conv3d:
+      - signature: "array(array, array, std::tuple<int, int, int>, std::tuple<int, int, int>, std::tuple<int, int, int>, int, StreamOrDevice)"
+        suffix: ""
+    conv_general:
+      - signature: "array(array, array, std::vector<int>, std::vector<int>, std::vector<int>, std::vector<int>, std::vector<int>, int, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, std::vector<int>, std::vector<int>, std::vector<int>, std::vector<int>, int, bool, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    conv_transpose1d:
+      - signature: "array(array, array, int, int, int, int, int, StreamOrDevice)"
+        suffix: ""
+    conv_transpose2d:
+      - signature: "array(array, array, std::pair<int, int>, std::pair<int, int>, std::pair<int, int>, std::pair<int, int>, int, StreamOrDevice)"
+        suffix: ""
+    conv_transpose3d:
+      - signature: "array(array, array, std::tuple<int, int, int>, std::tuple<int, int, int>, std::tuple<int, int, int>, std::tuple<int, int, int>, int, StreamOrDevice)"
+        suffix: ""
+    conjugate:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return the complex conjugate of each element.
+    contiguous:
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+        doc: Return a contiguous array, optionally allowing column-major layout.
+    count_nonzero:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: ""
+        doc: Count nonzero elements over one axis.
+      - signature: "array(array, bool, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    copy:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    cos:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    cosh:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    cummax:
+      - signature: "array(array, int, bool, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, bool, bool, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    cummin:
+      - signature: "array(array, int, bool, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, bool, bool, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    cumprod:
+      - signature: "array(array, int, bool, bool, std::optional<Dtype>, StreamOrDevice)"
+        suffix: ""
+        doc: Return the cumulative product along an axis.
+      - signature: "array(array, int, bool, bool, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, bool, bool, std::optional<Dtype>, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "array(array, bool, bool, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    cumsum:
+      - signature: "array(array, int, bool, bool, std::optional<Dtype>, StreamOrDevice)"
+        suffix: ""
+        doc: Return the cumulative sum along an axis.
+      - signature: "array(array, int, bool, bool, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, bool, bool, std::optional<Dtype>, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "array(array, bool, bool, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    custom_function:
+      - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<std::vector<array>(const std::vector<array>&)>, std::optional<std::function<std::vector<array>(const std::vector<array>&, const std::vector<array>&, const std::vector<array>&)>>, std::optional<std::function<std::vector<array>(const std::vector<array>&, const std::vector<array>&, const std::vector<int>&)>>, std::optional<std::function<std::pair<std::vector<array>, std::vector<int>>(const std::vector<array>&, const std::vector<int>&)>>)"
+        suffix: ""
+    custom_vjp:
+      - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<std::vector<array>(const std::vector<array>&)>, std::function<std::vector<array>(const std::vector<array>&, const std::vector<array>&, const std::vector<array>&)>)"
+        suffix: ""
+    degrees:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    depends:
+      - signature: "std::vector<array>(std::vector<array>, std::vector<array>)"
+        suffix: ""
+    dequantize:
+      - signature: "array(array, array, std::optional<array>, std::optional<int>, std::optional<int>, std::string, std::optional<array>, std::optional<Dtype>, StreamOrDevice)"
+        suffix: ""
+    diag:
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: ""
+    diagonal:
+      - signature: "array(array, int, int, int, StreamOrDevice)"
+        suffix: ""
+    diff:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        suffix: ""
+        doc: Return the n-th discrete difference along an axis.
+    disable_compile:
+      - signature: "void()"
+        suffix: ""
+    divide:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    divmod:
+      - signature: "std::vector<array>(array, array, StreamOrDevice)"
+        suffix: ""
+    einsum_path:
+      - signature: "std::pair<std::vector<std::vector<int>>, std::string>(std::string, std::vector<array>)"
+        skip: true
+        reason: unsupported_type
+    enable_compile:
+      - signature: "void()"
+        suffix: ""
+    einsum:
+      - signature: "array(std::string, std::vector<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Evaluate an Einstein summation over the input arrays.
+    equal:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    erf:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    erfinv:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    eval:
+      - signature: "void(std::vector<array>)"
+        suffix: ""
+        doc: Evaluate the arrays synchronously.
+      - signature: "void(Arrays&&...)"
+        skip: true
+        reason: excluded_by_policy
+    expand_dims:
+      - signature: "array(array, std::vector<int>, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: ""
+    export_to_dot:
+      - signature: "void(std::ostream, NodeNamer, std::vector<array>)"
+        suffix: ""
+        doc: Export the computation graph for the arrays in DOT format.
+      - signature: "void(std::ostream, NodeNamer, Arrays&&...)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "void(std::ostream, std::vector<array>)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "void(std::ostream, Arrays&&...)"
+        skip: true
+        reason: excluded_by_policy
+    exp:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    expm1:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    eye:
+      - signature: "array(int, int, int, Dtype, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(int, int, int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(int, Dtype, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(int, int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    flatten:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    flip:
+      - signature: "array(array, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, int, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    floor:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    floor_divide:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    full:
+      - signature: "array(Shape, array, Dtype, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(Shape, array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    full_like:
+      - signature: "array(array, array, Dtype, StreamOrDevice)"
+        suffix: ""
+        doc: Return an array with the same shape as the input and filled with a value.
+      - signature: "array(array, array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    from_fp8:
+      - signature: "array(array, Dtype, StreamOrDevice)"
+        suffix: ""
+    gather:
+      - signature: "array(array, std::vector<array>, std::vector<int>, Shape, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, int, Shape, StreamOrDevice)"
+        suffix: "single"
+        doc: Gather values from an array using indices along one axis.
+    gather_mm:
+      - signature: "array(array, array, std::optional<array>, std::optional<array>, bool, StreamOrDevice)"
+        suffix: ""
+    gather_qmm:
+      - signature: "array(array, array, array, std::optional<array>, std::optional<array>, std::optional<array>, bool, std::optional<int>, std::optional<int>, std::string, bool, StreamOrDevice)"
+        suffix: ""
+    get_active_memory:
+      - signature: "size_t()"
+        suffix: ""
+        doc: Return actively used memory in bytes, excluding cached buffers.
+    get_cache_memory:
+      - signature: "size_t()"
+        suffix: ""
+        doc: Return the memory cache size in bytes.
+    get_memory_limit:
+      - signature: "size_t()"
+        suffix: ""
+        doc: Return the current memory limit in bytes.
+    get_peak_memory:
+      - signature: "size_t()"
+        suffix: ""
+        doc: Return the peak active memory in bytes since startup or the last reset.
+    grad:
+      - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<array(const std::vector<array>&)>, std::vector<int>)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<array(const std::vector<array>&)>, int)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "std::function<array(const array&)>(std::function<array(const array&)>)"
+        skip: true
+        reason: excluded_by_policy
+    greater:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    greater_equal:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    hadamard_transform:
+      - signature: "array(array, std::optional<float>, StreamOrDevice)"
+        suffix: ""
+    hamming:
+      - signature: "array(int, StreamOrDevice)"
+        suffix: ""
+    hanning:
+      - signature: "array(int, StreamOrDevice)"
+        suffix: ""
+    identity:
+      - signature: "array(int, Dtype, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    imag:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return the imaginary component of each element.
+    inner:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    isfinite:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return a boolean array indicating finite elements.
+    isinf:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return a boolean array indicating infinite elements.
+    isnan:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return a boolean array indicating NaN elements.
+    isclose:
+      - signature: "array(array, array, double, double, bool, StreamOrDevice)"
+        suffix: ""
+    isneginf:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return a boolean array indicating negative infinite elements.
+    isposinf:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return a boolean array indicating positive infinite elements.
+    jvp:
+      - signature: "std::pair<std::vector<array>, std::vector<array>>(std::function<std::vector<array>(const std::vector<array>&)>, std::vector<array>, std::vector<array>)"
+        suffix: ""
+      - signature: "std::pair<array, array>(std::function<array(const array&)>, array, array)"
+        skip: true
+        reason: excluded_by_policy
+    kron:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    load:
+      - signature: "array(std::shared_ptr<io::Reader>, StreamOrDevice)"
+        suffix: "reader"
+      - signature: "array(std::string, StreamOrDevice)"
+        suffix: ""
+    load_gguf:
+      - signature: "GGUFLoad(std::string, StreamOrDevice)"
+        suffix: ""
+    load_safetensors:
+      - signature: "SafetensorsLoad(std::shared_ptr<io::Reader>, StreamOrDevice)"
+        suffix: "reader"
+      - signature: "SafetensorsLoad(std::string, StreamOrDevice)"
+        suffix: ""
+        doc: Load arrays and metadata from a SafeTensors file.
+    left_shift:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    less:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    less_equal:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    linspace:
+      - signature: "array(double, double, int, Dtype, StreamOrDevice)"
+        suffix: ""
+    log:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    log10:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    log1p:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    log2:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    logaddexp:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    logcumsumexp:
+      - signature: "array(array, int, bool, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, bool, bool, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    logical_and:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    logical_not:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    logical_or:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    logical_xor:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    logsumexp:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    max:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    matmul:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    masked_scatter:
+      - signature: "array(array, array, array, StreamOrDevice)"
+        suffix: ""
+        doc: Scatter values into an array where the mask is true.
+    meshgrid:
+      - signature: "std::vector<array>(std::vector<array>, bool, std::string, StreamOrDevice)"
+        suffix: ""
+    maximum:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    mean:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    median:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, bool, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    min:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    minimum:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    moveaxis:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        suffix: ""
+    multiply:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    nan_to_num:
+      - signature: "array(array, float, std::optional<float>, std::optional<float>, StreamOrDevice)"
+        suffix: ""
+    negative:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    not_equal:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    number_of_elements:
+      - signature: "array(array, std::vector<int>, bool, Dtype, StreamOrDevice)"
+        suffix: ""
+    ones:
+      - signature: "array(Shape, Dtype, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(Shape, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    ones_like:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return an array of ones with the same shape and dtype as the input.
+    outer:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    pad:
+      - signature: "array(array, std::vector<int>, Shape, Shape, array, std::string, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::vector<std::pair<int, int>>, array, std::string, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, std::pair<int, int>, array, std::string, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, int, array, std::string, StreamOrDevice)"
+        suffix: "symmetric"
+        doc: Pad an array with the same padding width before and after each axis.
+    partition:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: ""
+    power:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    positive:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    put_along_axis:
+      - signature: "array(array, array, array, int, StreamOrDevice)"
+        suffix: ""
+    qqmm:
+      - signature: "array(array, array, std::optional<array>, std::optional<int>, std::optional<int>, std::string, std::optional<array>, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Quantized matrix multiplication with optional scales, biases, and transpose.
+    print_graph:
+      - signature: "void(std::ostream, NodeNamer, std::vector<array>)"
+        suffix: ""
+        doc: Print the computation graph for the arrays.
+      - signature: "void(std::ostream, NodeNamer, Arrays&&...)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "void(std::ostream, std::vector<array>)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "void(std::ostream, Arrays&&...)"
+        skip: true
+        reason: excluded_by_policy
+    prod:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    quantized_matmul:
+      - signature: "array(array, array, array, std::optional<array>, bool, std::optional<int>, std::optional<int>, std::string, StreamOrDevice)"
+        suffix: ""
+    quantize:
+      - signature: "std::vector<array>(array, std::optional<int>, std::optional<int>, std::string, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+    radians:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    real:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return the real component of each element.
+    remainder:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    repeat:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: ""
+        doc: Repeat each element of the array.
+    reshape:
+      - signature: "array(array, Shape, StreamOrDevice)"
+        suffix: ""
+    reciprocal:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    reset_peak_memory:
+      - signature: "void()"
+        suffix: ""
+        doc: Reset the recorded peak active memory to zero.
+    right_shift:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    roll:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, int, std::vector<int>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, Shape, int, StreamOrDevice)"
+        suffix: "axis"
+        doc: Roll array elements by shifts along one axis.
+      - signature: "array(array, Shape, std::vector<int>, StreamOrDevice)"
+        suffix: "axes"
+        doc: Roll array elements by shifts along the given axes.
+      - signature: "array(array, int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, Shape, StreamOrDevice)"
+        suffix: ""
+        doc: Roll flattened array elements by shifts.
+    rsqrt:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    round:
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    save:
+      - signature: "void(std::shared_ptr<io::Writer>, array)"
+        suffix: "writer"
+      - signature: "void(std::string, array)"
+        suffix: ""
+    save_gguf:
+      - signature: "void(std::string, std::unordered_map<std::string, array>, std::unordered_map<std::string, GGUFMetaData>)"
+        suffix: ""
+        doc: Save arrays and GGUF metadata to a GGUF file.
+    save_safetensors:
+      - signature: "void(std::shared_ptr<io::Writer>, std::unordered_map<std::string, array>, std::unordered_map<std::string, std::string>)"
+        suffix: "writer"
+        doc: Save arrays and metadata in SafeTensors format to a writer.
+      - signature: "void(std::string, std::unordered_map<std::string, array>, std::unordered_map<std::string, std::string>)"
+        suffix: ""
+        doc: Save arrays and metadata to a SafeTensors file.
+    set_compile_mode:
+      - signature: "void(CompileMode)"
+        suffix: ""
+    set_cache_limit:
+      - signature: "size_t(size_t)"
+        suffix: ""
+        doc: Set the cache limit in bytes and return the previous limit.
+    set_memory_limit:
+      - signature: "size_t(size_t)"
+        suffix: ""
+        doc: Set the memory limit in bytes and return the previous limit.
+    set_wired_limit:
+      - signature: "size_t(size_t)"
+        suffix: ""
+        doc: Set the wired memory limit in bytes and return the previous limit.
+    segmented_mm:
+      - signature: "array(array, array, array, StreamOrDevice)"
+        suffix: ""
+    scatter:
+      - signature: "array(array, std::vector<array>, array, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, array, int, StreamOrDevice)"
+        suffix: "single"
+        doc: Scatter updates into an array using indices along one axis.
+    scatter_add:
+      - signature: "array(array, std::vector<array>, array, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, array, int, StreamOrDevice)"
+        suffix: "single"
+        doc: Add updates into an array using scatter indices along one axis.
+    scatter_add_axis:
+      - signature: "array(array, array, array, int, StreamOrDevice)"
+        suffix: ""
+    scatter_max:
+      - signature: "array(array, std::vector<array>, array, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, array, int, StreamOrDevice)"
+        suffix: "single"
+        doc: Take the maximum with updates scattered along one axis.
+    scatter_min:
+      - signature: "array(array, std::vector<array>, array, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, array, int, StreamOrDevice)"
+        suffix: "single"
+        doc: Take the minimum with updates scattered along one axis.
+    scatter_prod:
+      - signature: "array(array, std::vector<array>, array, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, array, int, StreamOrDevice)"
+        suffix: "single"
+        doc: Multiply updates into an array using scatter indices along one axis.
+    slice:
+      - signature: "array(array, Shape, Shape, Shape, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::initializer_list<int>, Shape, Shape, StreamOrDevice)"
+        skip: true
+        reason: unsupported_type
+      - signature: "array(array, array, std::vector<int>, Shape, StreamOrDevice)"
+        suffix: "dynamic"
+      - signature: "array(array, Shape, Shape, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    slice_update:
+      - signature: "array(array, array, Shape, Shape, Shape, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, Shape, Shape, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, array, array, std::vector<int>, StreamOrDevice)"
+        suffix: "dynamic"
+    slice_update_add:
+      - signature: "array(array, array, Shape, Shape, Shape, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, Shape, Shape, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    slice_update_max:
+      - signature: "array(array, array, Shape, Shape, Shape, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, Shape, Shape, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    slice_update_min:
+      - signature: "array(array, array, Shape, Shape, Shape, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, Shape, Shape, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    slice_update_prod:
+      - signature: "array(array, array, Shape, Shape, Shape, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, array, Shape, Shape, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    softmax:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+    sort:
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    sigmoid:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    sign:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    sin:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    sinh:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    split:
+      - signature: "std::vector<array>(array, int, int, StreamOrDevice)"
+        suffix: ""
+      - signature: "std::vector<array>(array, Shape, int, StreamOrDevice)"
+        suffix: "sections"
+        doc: Split an array at the given section boundaries along an axis.
+      - signature: "std::vector<array>(array, int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "std::vector<array>(array, Shape, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    sqrt:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    square:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    squeeze:
+      - signature: "array(array, std::vector<int>, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    stack:
+      - signature: "array(std::vector<array>, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(std::vector<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Stack arrays along a new first axis.
+    std:
+      - signature: "array(array, std::vector<int>, bool, int, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, int, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    stop_gradient:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    subtract:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+    swapaxes:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        suffix: ""
+    sum:
+      - signature: "array(array, std::vector<int>, bool, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    take:
+      - signature: "array(array, array, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, int, int, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, int, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    take_along_axis:
+      - signature: "array(array, array, int, StreamOrDevice)"
+        suffix: ""
+    tan:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    tanh:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    tensordot:
+      - signature: "array(array, array, std::vector<int>, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+        doc: Contract two arrays over the given axes.
+      - signature: "array(array, array, int, StreamOrDevice)"
+        suffix: "axis"
+    tile:
+      - signature: "array(array, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+        doc: Repeat the array according to the given repetitions for each dimension.
+    topk:
+      - signature: "array(array, int, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: ""
+    to_fp8:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    trace:
+      - signature: "array(array, int, int, int, Dtype, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, int, int, int, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    transpose:
+      - signature: "array(array, std::vector<int>, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, std::initializer_list<int>, StreamOrDevice)"
+        skip: true
+        reason: unsupported_type
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    trunc:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+    tri:
+      - signature: "array(int, int, int, Dtype, StreamOrDevice)"
+        suffix: ""
+        doc: Return a matrix with ones at and below the given diagonal and zeros elsewhere.
+      - signature: "array(int, Dtype, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    tril:
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: ""
+        doc: Return the lower triangular part of the array, zeroing entries above the kth diagonal.
+    triu:
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: ""
+        doc: Return the upper triangular part of the array, zeroing entries below the kth diagonal.
+    unflatten:
+      - signature: "array(array, int, Shape, StreamOrDevice)"
+        suffix: ""
+    unstack:
+      - signature: "std::vector<array>(array, int, StreamOrDevice)"
+        suffix: ""
+      - signature: "std::vector<array>(array, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    value_and_grad:
+      - signature: "ValueAndGradFn(std::function<std::vector<array>(const std::vector<array>&)>, std::vector<int>)"
+        suffix: ""
+      - signature: "ValueAndGradFn(std::function<std::vector<array>(const std::vector<array>&)>, int)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "SimpleValueAndGradFn(std::function<array(const std::vector<array>&)>, std::vector<int>)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "SimpleValueAndGradFn(std::function<array(const std::vector<array>&)>, int)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "std::function<std::pair<array, array>(const array&)>(std::function<array(const array&)>)"
+        skip: true
+        reason: excluded_by_policy
+    var:
+      - signature: "array(array, std::vector<int>, bool, int, StreamOrDevice)"
+        suffix: "axes"
+      - signature: "array(array, int, bool, int, StreamOrDevice)"
+        suffix: "axis"
+      - signature: "array(array, bool, int, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    vjp:
+      - signature: "std::pair<std::vector<array>, std::vector<array>>(std::function<std::vector<array>(const std::vector<array>&)>, std::vector<array>, std::vector<array>)"
+        suffix: ""
+      - signature: "std::pair<array, array>(std::function<array(const array&)>, array, array)"
+        skip: true
+        reason: excluded_by_policy
+    vmap:
+      - signature: "std::function<array(const array&, const array&)>(std::function<array(const array&, const array&)>, int, int, int)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "std::function<array(const array&)>(std::function<array(const array&)>, int, int)"
+        skip: true
+        reason: excluded_by_policy
+      - signature: "std::function<std::vector<array>(const std::vector<array>&)>(std::function<std::vector<array>(const std::vector<array>&)>, std::vector<int>, std::vector<int>)"
+        skip: true
+        reason: excluded_by_policy
+    view:
+      - signature: "array(array, Dtype, StreamOrDevice)"
+        suffix: ""
+        doc: Return a view of the array with the given data type.
+    vecdot:
+      - signature: "array(array, array, int, StreamOrDevice)"
+        suffix: ""
+        doc: Compute a vector dot product along an axis.
+    where:
+      - signature: "array(array, array, array, StreamOrDevice)"
+        suffix: ""
+    zeros:
+      - signature: "array(Shape, Dtype, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(Shape, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    zeros_like:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Return an array of zeros with the same shape and dtype as the input.
+  mlx_core_cu:
+    device_info:
+      - signature: "std::unordered_map<std::string, std::variant<std::string, size_t>>(int)"
+        skip: true
+        reason: unsupported_type
+    is_available:
+      - signature: "bool()"
+        suffix: ""
+        doc: Report whether CUDA support is available.
+  mlx_core_distributed:
+    all_gather:
+      - signature: "array(array, std::optional<Group>, StreamOrDevice)"
+        suffix: ""
+        doc: Gather arrays from all ranks in the group.
+    all_max:
+      - signature: "array(array, std::optional<Group>, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the element-wise maximum across all ranks in the group.
+    all_min:
+      - signature: "array(array, std::optional<Group>, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the element-wise minimum across all ranks in the group.
+    all_sum:
+      - signature: "array(array, std::optional<Group>, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the element-wise sum across all ranks in the group.
+    recv:
+      - signature: "array(Shape, Dtype, int, std::optional<Group>, StreamOrDevice)"
+        suffix: ""
+        doc: Receive an array with the given shape and dtype from a source rank.
+    recv_like:
+      - signature: "array(array, int, std::optional<Group>, StreamOrDevice)"
+        suffix: ""
+        doc: Receive an array shaped and typed like the input from a source rank.
+    send:
+      - signature: "array(array, int, std::optional<Group>, StreamOrDevice)"
+        suffix: ""
+        doc: Send an array to a destination rank.
+    sum_scatter:
+      - signature: "array(array, std::optional<Group>, StreamOrDevice)"
+        suffix: ""
+        doc: Sum arrays across the group and scatter the result by rank.
+  mlx_core_fast:
+    cuda_kernel:
+      - signature: "CustomKernelFunction(std::string, std::vector<std::string>, std::vector<std::string>, std::string, std::string, bool, int)"
+        suffix: ""
+        doc: Create a custom CUDA kernel function.
+    layer_norm:
+      - signature: "array(array, std::optional<array>, std::optional<array>, float, StreamOrDevice)"
+        suffix: ""
+        doc: Apply layer normalization with optional weight and bias.
+    metal_kernel:
+      - signature: "CustomKernelFunction(std::string, std::vector<std::string>, std::vector<std::string>, std::string, std::string, bool, bool, CompileOptions)"
+        suffix: ""
+        doc: Create a custom Metal kernel function.
+    precompiled_cuda_kernel:
+      - signature: "std::vector<array>(std::string, std::string, std::vector<array>, std::vector<Shape>, std::vector<Dtype>, std::vector<ScalarArg>, std::tuple<int, int, int>, std::tuple<int, int, int>, int, std::optional<float>, bool, StreamOrDevice)"
+        skip: true
+        reason: excluded_by_policy
+    rms_norm:
+      - signature: "array(array, std::optional<array>, float, StreamOrDevice)"
+        suffix: ""
+        doc: Apply RMS normalization with an optional weight.
+    rope:
+      - signature: "array(array, int, bool, std::optional<float>, float, int, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Apply rotary positional embeddings using an integer offset.
+      - signature: "array(array, int, bool, std::optional<float>, float, array, std::optional<array>, StreamOrDevice)"
+        suffix: "dynamic"
+        doc: Apply rotary positional embeddings using per-position offsets.
+    scaled_dot_product_attention:
+      - signature: "array(array, array, array, float, std::string, std::optional<array>, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+  mlx_core_fft:
+    fft:
+      - signature: "array(array, int, int, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, int, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    fft2:
+      - signature: "array(array, Shape, std::vector<int>, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::vector<int>, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    fftfreq:
+      - signature: "array(int, double, StreamOrDevice)"
+        suffix: ""
+    fftn:
+      - signature: "array(array, Shape, std::vector<int>, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::vector<int>, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    fftshift:
+      - signature: "array(array, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    ifft:
+      - signature: "array(array, int, int, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, int, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    ifft2:
+      - signature: "array(array, Shape, std::vector<int>, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::vector<int>, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    ifftn:
+      - signature: "array(array, Shape, std::vector<int>, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::vector<int>, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    ifftshift:
+      - signature: "array(array, std::vector<int>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    irfft:
+      - signature: "array(array, int, int, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, int, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    irfft2:
+      - signature: "array(array, Shape, std::vector<int>, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::vector<int>, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    irfftn:
+      - signature: "array(array, Shape, std::vector<int>, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::vector<int>, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    rfft:
+      - signature: "array(array, int, int, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, int, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    rfft2:
+      - signature: "array(array, Shape, std::vector<int>, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::vector<int>, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    rfftfreq:
+      - signature: "array(int, double, StreamOrDevice)"
+        suffix: ""
+    rfftn:
+      - signature: "array(array, Shape, std::vector<int>, FFTNorm, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::vector<int>, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, FFTNorm, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+  mlx_core_linalg:
+    cholesky:
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the Cholesky decomposition of a positive definite matrix.
+    cholesky_inv:
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the inverse from a Cholesky factorization.
+    cross:
+      - signature: "array(array, array, int, StreamOrDevice)"
+        suffix: ""
+    det:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the determinant of a square matrix.
+    eig:
+      - signature: "std::pair<array, array>(array, StreamOrDevice)"
+        suffix: ""
+        doc: Compute eigenvalues and right eigenvectors of a square matrix.
+    eigh:
+      - signature: "std::pair<array, array>(array, std::string, StreamOrDevice)"
+        suffix: ""
+        doc: Compute eigenvalues and eigenvectors of a Hermitian matrix.
+    eigvals:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Compute eigenvalues of a square matrix.
+    eigvalsh:
+      - signature: "array(array, std::string, StreamOrDevice)"
+        suffix: ""
+        doc: Compute eigenvalues of a Hermitian matrix.
+    inv:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the inverse of a square matrix.
+    lu:
+      - signature: "std::vector<array>(array, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the LU factorization of a matrix.
+    lu_factor:
+      - signature: "std::pair<array, array>(array, StreamOrDevice)"
+        suffix: ""
+        doc: Compute packed LU factors and pivots for a matrix.
+    norm:
+      - signature: "array(array, double, std::optional<std::vector<int>>, bool, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, double, int, bool, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, std::string, std::optional<std::vector<int>>, bool, StreamOrDevice)"
+        suffix: "matrix"
+        doc: Compute a matrix norm over the given axes.
+      - signature: "array(array, std::string, int, bool, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(array, std::optional<std::vector<int>>, bool, StreamOrDevice)"
+        suffix: "l2"
+        doc: Compute the L2 norm over the given axes.
+      - signature: "array(array, int, bool, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    pinv:
+      - signature: "array(array, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the Moore-Penrose pseudoinverse of a matrix.
+    qr:
+      - signature: "std::pair<array, array>(array, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the QR factorization of a matrix.
+    slogdet:
+      - signature: "std::pair<array, array>(array, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the sign and logarithm of the determinant.
+    solve:
+      - signature: "array(array, array, StreamOrDevice)"
+        suffix: ""
+        doc: Solve a linear system.
+    solve_triangular:
+      - signature: "array(array, array, bool, StreamOrDevice)"
+        suffix: ""
+        doc: Solve a triangular linear system.
+    svd:
+      - signature: "std::vector<array>(array, bool, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the singular value decomposition of a matrix.
+      - signature: "std::vector<array>(array, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    tri_inv:
+      - signature: "array(array, bool, StreamOrDevice)"
+        suffix: ""
+        doc: Compute the inverse of a triangular matrix.
+  mlx_core_metal:
+    device_info:
+      - signature: "std::unordered_map<std::string, std::variant<std::string, size_t>>()"
+        skip: true
+        reason: unsupported_type
+    is_available:
+      - signature: "bool()"
+        suffix: ""
+        doc: Return true when Metal is available.
+    get_metallib_path:
+      - signature: "std::string()"
+        suffix: ""
+        doc: Return the custom Metal library path.
+    set_metallib_path:
+      - signature: "void(std::string)"
+        suffix: ""
+        doc: Set the custom Metal library path.
+    start_capture:
+      - signature: "void(std::string)"
+        suffix: ""
+    stop_capture:
+      - signature: "void()"
+        suffix: ""
+        doc: Stop the active Metal GPU capture.
+  mlx_core_random:
+    bernoulli:
+      - signature: "array(array, Shape, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(array, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    bits:
+      - signature: "array(Shape, int, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(Shape, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    categorical:
+      - signature: "array(array, int, Shape, std::optional<array>, StreamOrDevice)"
+        suffix: "shape"
+        doc: Sample categorical values with the given output shape.
+      - signature: "array(array, int, int, std::optional<array>, StreamOrDevice)"
+        suffix: "num_samples"
+        doc: Sample the given number of categorical values.
+      - signature: "array(array, int, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Sample categorical values from logits along an axis.
+    gumbel:
+      - signature: "array(Shape, Dtype, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Generate samples from a Gumbel distribution.
+    key:
+      - signature: "array(uint64_t)"
+        suffix: ""
+    laplace:
+      - signature: "array(Shape, Dtype, float, float, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(Shape, float, float, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(Shape, Dtype, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(Shape, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    multivariate_normal:
+      - signature: "array(array, array, Shape, Dtype, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+    normal:
+      - signature: "array(Shape, Dtype, std::optional<array>, std::optional<array>, std::optional<array>, StreamOrDevice)"
+        suffix: "broadcast"
+      - signature: "array(Shape, Dtype, float, float, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Generate samples from a normal distribution with scalar mean and standard deviation.
+      - signature: "array(Shape, float, float, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(Shape, Dtype, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(Shape, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    permutation:
+      - signature: "array(array, int, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Return a randomly permuted copy of an array along an axis.
+      - signature: "array(int, std::optional<array>, StreamOrDevice)"
+        suffix: "arange"
+        doc: Return a random permutation of integers from zero to n.
+    randint:
+      - signature: "array(array, array, Shape, Dtype, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+    seed:
+      - signature: "void(uint64_t)"
+        suffix: ""
+    split:
+      - signature: "array(array, int, StreamOrDevice)"
+        suffix: "num"
+      - signature: "std::pair<array, array>(array, StreamOrDevice)"
+        suffix: ""
+    truncated_normal:
+      - signature: "array(array, array, Shape, Dtype, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+        doc: Generate samples from a normal distribution truncated between lower and upper bounds.
+      - signature: "array(array, array, Dtype, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+    uniform:
+      - signature: "array(array, array, Shape, Dtype, std::optional<array>, StreamOrDevice)"
+        suffix: ""
+      - signature: "array(Shape, Dtype, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+      - signature: "array(Shape, std::optional<array>, StreamOrDevice)"
+        skip: true
+        reason: covered_by_other_variant
+
+allowed_detail_functions:
+  - compile
+  - compile_clear_cache
+  - compile_erase
+  - vmap_replace
+  - vmap_trace

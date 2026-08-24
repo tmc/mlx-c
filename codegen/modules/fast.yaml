@@ -1,0 +1,4 @@
+name: fast
+headers:
+  - mlx/fast.h
+doc: Fast custom operations

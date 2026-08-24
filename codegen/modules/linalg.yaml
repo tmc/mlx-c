@@ -1,0 +1,4 @@
+name: linalg
+headers:
+  - mlx/linalg.h
+doc: Linear algebra operations

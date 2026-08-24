@@ -1,0 +1,4 @@
+name: memory
+headers:
+  - mlx/memory.h
+doc: Memory operations

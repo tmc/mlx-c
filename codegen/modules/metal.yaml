@@ -1,0 +1,4 @@
+name: metal
+headers:
+  - mlx/backend/metal/metal.h
+doc: Metal specific operations

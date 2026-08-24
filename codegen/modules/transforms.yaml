@@ -1,0 +1,4 @@
+name: transforms
+headers:
+  - mlx/transforms.h
+doc: Transform operations

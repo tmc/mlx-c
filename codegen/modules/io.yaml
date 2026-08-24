@@ -1,0 +1,4 @@
+name: io
+headers:
+  - mlx/io.h
+doc: IO operations

@@ -1,0 +1,14 @@
+# Declared divergences from upstream mlx-c for symbols we share with it.
+#
+# We are a superset fork: symbols only we ship are additive and need no entry
+# here. A shared symbol whose declaration differs from upstream's is a break for
+# anyone who installs our library expecting upstream's, so every one of them is
+# listed below with the resolution we intend. The `ours` and `upstream` fields
+# pin the divergence: if either declaration changes, the waiver goes stale and
+# the gate fails until it is re-read.
+#
+# Compared against manifest upstream.ref (upstream/mlx-v0.32.0).
+
+schema_version: 1
+
+divergences:

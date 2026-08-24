@@ -1,0 +1,4 @@
+name: distributed
+headers:
+  - mlx/distributed/ops.h
+doc: Distributed collectives

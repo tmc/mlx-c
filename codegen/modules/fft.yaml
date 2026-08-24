@@ -1,0 +1,4 @@
+name: fft
+headers:
+  - mlx/fft.h
+doc: FFT operations

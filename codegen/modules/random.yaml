@@ -1,0 +1,4 @@
+name: random
+headers:
+  - mlx/random.h
+doc: Random number operations

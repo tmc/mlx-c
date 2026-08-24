@@ -1,0 +1,363 @@
+schema_version: 1
+types:
+  - cpp: "@std::vector<int>"
+    c: mlx_vector_int
+    alternates:
+      - "@std::vector<int>"
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "bool"
+    c: bool
+    class: primitive
+    ownership: value
+    nullability: nonnull
+    conversion: primitive
+  - cpp: "double"
+    c: double
+    class: primitive
+    ownership: value
+    nullability: nonnull
+    conversion: primitive
+  - cpp: "float"
+    c: float
+    class: primitive
+    ownership: value
+    nullability: nonnull
+    conversion: primitive
+  - cpp: "int"
+    c: int
+    class: primitive
+    ownership: value
+    nullability: nonnull
+    conversion: primitive
+  - cpp: "mlx::core::CompileMode"
+    alternates:
+      - "CompileMode"
+    class: enum
+    ownership: value
+    nullability: nonnull
+    conversion: enum
+  - cpp: "mlx::core::Dtype"
+    c: mlx_dtype
+    alternates:
+      - "Dtype"
+    class: enum
+    ownership: value
+    nullability: nonnull
+    conversion: enum
+  - cpp: "mlx::core::NodeNamer"
+    c: mlx_node_namer
+    alternates:
+      - "NodeNamer"
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "mlx::core::Shape"
+    alternates:
+      - "Shape"
+    class: vector
+    ownership: borrowed_buffer
+    nullability: nonnull
+    conversion: small_vector
+  - cpp: "mlx::core::Stream"
+    c: mlx_stream
+    alternates:
+      - "StreamOrDevice"
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "mlx::core::Strides"
+    alternates:
+      - "Strides"
+    class: vector
+    ownership: borrowed_buffer
+    nullability: nonnull
+    conversion: small_vector
+  - cpp: "mlx::core::array"
+    c: mlx_array
+    alternates:
+      - "array"
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "mlx::core::distributed::Group"
+    c: mlx_distributed_group
+    alternates:
+      - "Group"
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "mlx::core::fft::FFTNorm"
+    c: mlx_fft_norm
+    alternates:
+      - "FFTNorm"
+    class: enum
+    ownership: value
+    nullability: nonnull
+    conversion: enum
+  - cpp: "size_t"
+    c: size_t
+    class: primitive
+    ownership: value
+    nullability: nonnull
+    conversion: primitive
+  - cpp: "std::function<std::pair<std::vector<array>, std::vector<array>>(const std::vector<array>&)>"
+    c: mlx_closure_value_and_grad
+    alternates:
+      - "ValueAndGradFn"
+      - "std::function<std::pair<std::vector<array>, std::vector<array>>(std::vector<array>)>"
+      - "std::function<std::pair<std::vector<mlx::core::array>, std::vector<mlx::core::array>>(const std::vector<mlx::core::array>&)>"
+    class: closure
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "std::function<std::pair<std::vector<mlx::core::array>, std::vector<int>>(std::vector<mlx::core::array>,std::vector<int>)>"
+    c: mlx_closure_custom_vmap
+    alternates:
+      - "std::function<std::pair<std::vector<array>, std::vector<int>>(std::vector<array>,std::vector<int>)>"
+      - "std::function<std::pair<std::vector<array>, std::vector<int>>(const std::vector<array>&, const std::vector<int>&)>"
+    class: closure
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "std::function<std::vector<array>(std::vector<array>)>"
+    c: mlx_closure
+    alternates:
+      - "std::function<std::vector<array>(const std::vector<array>&)>"
+      - "std::function<std::vector<mlx::core::array>(std::vector<mlx::core::array>)>"
+      - "std::function<std::vector<mlx::core::array>(const std::vector<mlx::core::array>&)>"
+    class: closure
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "std::function<std::vector<mlx::core::array>(std::vector<mlx::core::array>,std::vector<mlx::core::array>,std::vector<int>)>"
+    c: mlx_closure_custom_jvp
+    alternates:
+      - "std::function<std::vector<array>(std::vector<array>,std::vector<array>,std::vector<int>)>"
+      - "std::function<std::vector<array>(const std::vector<array>&, const std::vector<array>&, const std::vector<int>&)>"
+    class: closure
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "std::function<std::vector<mlx::core::array>(std::vector<mlx::core::array>,std::vector<mlx::core::array>,std::vector<mlx::core::array>)>"
+    c: mlx_closure_custom
+    alternates:
+      - "std::function<std::vector<array>(std::vector<array>,std::vector<array>,std::vector<array>)>"
+      - "std::function<std::vector<array>(const std::vector<array>&, const std::vector<array>&, const std::vector<array>&)>"
+    class: closure
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "std::optional<float>"
+    c: mlx_optional_float
+    class: optional_primitive
+    ownership: value
+    nullability: nullable
+    conversion: optional_primitive
+  - cpp: "std::optional<bool>"
+    c: mlx_optional_bool
+    class: optional_primitive
+    ownership: value
+    nullability: nullable
+    conversion: optional_primitive
+  - cpp: "std::optional<int>"
+    c: mlx_optional_int
+    class: optional_primitive
+    ownership: value
+    nullability: nullable
+    conversion: optional_primitive
+  - cpp: "std::optional<mlx::core::Dtype>"
+    c: mlx_optional_dtype
+    alternates:
+      - "std::optional<Dtype>"
+    class: optional_primitive
+    ownership: value
+    nullability: nullable
+    conversion: optional_primitive
+  - cpp: "std::optional<mlx::core::array>"
+    c: mlx_array
+    alternates:
+      - "std::optional<array>"
+    class: optional_handle
+    ownership: borrowed_handle
+    nullability: nullable
+    conversion: optional_handle
+  - cpp: "std::optional<mlx::core::distributed::Group>"
+    c: mlx_distributed_group
+    alternates:
+      - "std::optional<Group>"
+    class: optional_handle
+    ownership: borrowed_handle
+    nullability: nullable
+    conversion: optional_handle
+  - cpp: "std::optional<std::function<std::pair<std::vector<array>, std::vector<int>>(const std::vector<array>&, const std::vector<int>&)>>"
+    c: mlx_closure_custom_vmap
+    alternates:
+      - "std::optional<std::function<std::pair<std::vector<array>, std::vector<int>>(std::vector<array>,std::vector<int>)>>"
+    class: optional_closure
+    ownership: borrowed_handle
+    nullability: nullable
+    conversion: optional_handle
+  - cpp: "std::optional<std::function<std::vector<array>(const std::vector<array>&, const std::vector<array>&, const std::vector<array>&)>>"
+    c: mlx_closure_custom
+    alternates:
+      - "std::optional<std::function<std::vector<array>(std::vector<array>,std::vector<array>,std::vector<array>)>>"
+    class: optional_closure
+    ownership: borrowed_handle
+    nullability: nullable
+    conversion: optional_handle
+  - cpp: "std::optional<std::function<std::vector<array>(const std::vector<array>&, const std::vector<array>&, const std::vector<int>&)>>"
+    c: mlx_closure_custom_jvp
+    alternates:
+      - "std::optional<std::function<std::vector<array>(std::vector<array>,std::vector<array>,std::vector<int>)>>"
+    class: optional_closure
+    ownership: borrowed_handle
+    nullability: nullable
+    conversion: optional_handle
+  - cpp: "std::optional<std::vector<int>>"
+    class: optional_vector
+    ownership: borrowed_buffer
+    nullability: nullable
+    conversion: optional_raw_vector
+  - cpp: "std::ostream"
+    class: io
+    ownership: borrowed_stream
+    nullability: nullable
+    conversion: ostream
+  - cpp: "std::pair<int, int>"
+    alternates:
+      - "std::pair<int, int>"
+    class: pair
+    ownership: value
+    nullability: nonnull
+    conversion: pair_int
+  - cpp: "std::pair<mlx::core::array, mlx::core::array>"
+    alternates:
+      - "std::pair<array, array>"
+    class: tuple
+    ownership: out_params
+    nullability: nonnull
+    conversion: return_tuple
+  - cpp: "std::pair<std::unordered_map<std::string, mlx::core::array>, std::unordered_map<std::string, std::string>>"
+    alternates:
+      - "std::pair<std::unordered_map<std::string, array>, >"
+      - "SafetensorsLoad"
+    class: tuple
+    ownership: out_params
+    nullability: nonnull
+    conversion: return_tuple
+  - cpp: "std::pair<std::vector<mlx::core::array>, @std::vector<int>>"
+    alternates:
+      - "std::pair<std::vector<array>, @std::vector<int>>"
+    class: tuple
+    ownership: out_params
+    nullability: nonnull
+    conversion: return_tuple
+  - cpp: "std::pair<std::vector<mlx::core::array>, std::vector<mlx::core::array>>"
+    alternates:
+      - "std::pair<std::vector<array>, std::vector<array>>"
+    class: tuple
+    ownership: out_params
+    nullability: nonnull
+    conversion: return_tuple
+  - cpp: "std::shared_ptr<io::Reader>"
+    class: io
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: io_reader
+  - cpp: "std::shared_ptr<io::Writer>"
+    class: io
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: io_writer
+  - cpp: "std::string"
+    alternates:
+      - "std::string"
+    class: string
+    ownership: borrowed_string
+    nullability: nullable
+    conversion: string
+  - cpp: "std::tuple<int, int, int>"
+    alternates:
+      - "std::tuple<int, int, int>"
+    class: tuple
+    ownership: value
+    nullability: nonnull
+    conversion: tuple_int
+  - cpp: "std::tuple<mlx::core::array, mlx::core::array, mlx::core::array>"
+    alternates:
+      - "std::tuple<array, array, array>"
+    class: tuple
+    ownership: out_params
+    nullability: nonnull
+    conversion: return_tuple
+  - cpp: "std::unordered_map<std::string, mlx::core::array>"
+    c: mlx_map_string_to_array
+    alternates:
+      - "std::unordered_map<std::string, array>"
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "std::unordered_map<std::string, std::string>"
+    c: mlx_map_string_to_string
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "std::vector<int>"
+    class: vector
+    ownership: borrowed_buffer
+    nullability: nonnull
+    conversion: raw_vector
+  - cpp: "std::vector<mlx::core::array>"
+    c: mlx_vector_array
+    alternates:
+      - "std::vector<array>"
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "std::vector<size_t>"
+    class: vector
+    ownership: borrowed_buffer
+    nullability: nonnull
+    conversion: raw_vector
+  - cpp: "std::vector<std::string>"
+    c: mlx_vector_string
+    alternates:
+      - "std::vector<std::string>"
+    class: handle
+    ownership: borrowed_handle
+    nullability: nonnull
+    conversion: handle
+  - cpp: "std::vector<uint64_t>"
+    class: vector
+    ownership: borrowed_buffer
+    nullability: nonnull
+    conversion: raw_vector
+  - cpp: "uint64_t"
+    c: uint64_t
+    class: primitive
+    ownership: value
+    nullability: nonnull
+    conversion: primitive
+  - cpp: "uintptr_t"
+    c: uintptr_t
+    alternates:
+      - "std::uintptr_t"
+    class: primitive
+    ownership: value
+    nullability: nonnull
+    conversion: primitive
+  - cpp: "void"
+    class: void
+    ownership: none
+    nullability: nonnull
+    conversion: void

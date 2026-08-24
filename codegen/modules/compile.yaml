@@ -1,0 +1,5 @@
+name: compile
+headers:
+  - mlx/compile.h
+  - mlx/compile_impl.h
+doc: Compilation operations

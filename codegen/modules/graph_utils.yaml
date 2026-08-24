@@ -1,0 +1,4 @@
+name: graph_utils
+headers:
+  - mlx/graph_utils.h
+doc: Graph Utils
