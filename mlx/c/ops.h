@@ -506,6 +506,20 @@ int mlx_gather_qmm(
     const char* mode,
     bool sorted_indices,
     const mlx_stream s);
+int mlx_gather_qqmm(
+    mlx_array* res,
+    const mlx_array x,
+    const mlx_array w,
+    const mlx_array scales_w /* may be null */,
+    const mlx_array lhs_indices /* may be null */,
+    const mlx_array rhs_indices /* may be null */,
+    mlx_optional_int group_size,
+    mlx_optional_int bits,
+    const char* mode,
+    const mlx_array global_scale_x /* may be null */,
+    const mlx_array global_scale_w /* may be null */,
+    bool sorted_indices,
+    const mlx_stream s);
 int mlx_greater(
     mlx_array* res,
     const mlx_array a,
@@ -562,6 +576,14 @@ int mlx_less_equal(
     mlx_array* res,
     const mlx_array a,
     const mlx_array b,
+    const mlx_stream s);
+int mlx_linspace_endpoint(
+    mlx_array* res,
+    double start,
+    double stop,
+    int num,
+    bool endpoint,
+    mlx_dtype dtype,
     const mlx_stream s);
 int mlx_linspace(
     mlx_array* res,
@@ -744,6 +766,11 @@ int mlx_ones(
     mlx_array* res,
     const int* shape,
     size_t shape_num,
+    mlx_dtype dtype,
+    const mlx_stream s);
+int mlx_ones_like_dtype(
+    mlx_array* res,
+    const mlx_array a,
     mlx_dtype dtype,
     const mlx_stream s);
 int mlx_ones_like(mlx_array* res, const mlx_array a, const mlx_stream s);
@@ -981,6 +1008,12 @@ int mlx_scatter_prod_single(
     const mlx_array indices,
     const mlx_array updates,
     int axis,
+    const mlx_stream s);
+int mlx_searchsorted(
+    mlx_array* res,
+    const mlx_array sorted_sequence,
+    const mlx_array values,
+    const char* side,
     const mlx_stream s);
 int mlx_segmented_mm(
     mlx_array* res,
@@ -1312,6 +1345,11 @@ int mlx_zeros(
     mlx_array* res,
     const int* shape,
     size_t shape_num,
+    mlx_dtype dtype,
+    const mlx_stream s);
+int mlx_zeros_like_dtype(
+    mlx_array* res,
+    const mlx_array a,
     mlx_dtype dtype,
     const mlx_stream s);
 int mlx_zeros_like(mlx_array* res, const mlx_array a, const mlx_stream s);
