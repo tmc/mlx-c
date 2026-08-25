@@ -17,7 +17,7 @@ import (
 	"unicode"
 )
 
-var parsedCacheVersion = "mlxcgen-ast-v2"
+var parsedCacheVersion = "mlxcgen-ast-v3-" + docPipelineVersion
 
 // IncludePaths holds include paths for parsing.
 var IncludePaths []string
@@ -1227,21 +1227,27 @@ func extractDoc(node *clangNode) string {
 				// @code/@endcode blocks: flush pending text so the sanitizer
 				// sees the block boundary, then keep or drop the block.
 				var lines []string
-				cpp := false
+				omit := false
 				for _, line := range commentPart.Inner {
 					if line.Kind != "VerbatimBlockLineComment" {
 						continue
 					}
 					if cppOnlyTokenRE.MatchString(line.Text) {
-						cpp = true
+						omit = true
+						lines = append(lines, docCodeOmittedSentinel+"cpp")
+						continue
 					}
-					lines = append(lines, strings.TrimSpace(line.Text))
+					if pyOnlyTokenRE.MatchString(line.Text) {
+						omit = true
+						lines = append(lines, docCodeOmittedSentinel+"py")
+						continue
+					}
+					lines = append(lines, strings.TrimRight(line.Text, "\t "))
 				}
 				docs = append(docs, "") // block boundary marker
-				if cpp {
+				docs = append(docs, lines...)
+				if omit {
 					docs = append(docs, docCodeOmittedSentinel)
-				} else {
-					docs = append(docs, lines...)
 				}
 			}
 		}
@@ -1252,11 +1258,29 @@ func extractDoc(node *clangNode) string {
 	return sanitizeDocLines(docs)
 }
 
+// docPipelineVersion must be incremented whenever doc extraction or
+// sanitization changes its output. It participates in the AST cache key;
+// forgetting to bump it serves stale cached Doc strings (this bit us once).
+const docPipelineVersion = "doc-sanitize-v3" // v3: only drop lead-ins that start their own sentence
+
 // C++-only tokens whose presence makes a @code block unusable in a C header.
 var cppOnlyTokenRE = regexp.MustCompile(
 	`\bauto\s|std::|->|::|array\{|vector\{|new\b|\.c_str\(\)`)
 
+// Python-only tokens (numpy examples etc.) -- equally meaningless to C
+// consumers even though they are not C++.
+var pyOnlyTokenRE = regexp.MustCompile(`array\(\[\[|dtype=|\bnp\.|\bimport \w`)
+
 const docCodeOmittedSentinel = "\x00"
+
+func sentenceEndPrev(out []string, n int) string {
+	if n >= 2 {
+		return out[n-2]
+	}
+	return ""
+}
+
+var sentenceEndRE = regexp.MustCompile(`[.!?]["` + "`" + `]?$`)
 
 // sanitizeDocLines mirrors the ratified doc-comment cleanup: drop C++ code
 // blocks in favor of a single visible note (merging consecutive notes),
@@ -1265,35 +1289,67 @@ const docCodeOmittedSentinel = "\x00"
 func sanitizeDocLines(lines []string) string {
 	var out []string
 	pendingNote := false
-	for _, ln := range lines {
-		if pendingNote {
-			if ln == "" || (!strings.HasSuffix(strings.TrimSpace(ln), ":")) {
-				if strings.TrimSpace(ln) != "" {
-					pendingNote = false
-				}
-			} else {
-				continue // follow-on lead-in like "will produce:" after a note
+	inOmitBlock := false
+	omitNote := ""
+	pushNote := func(note string) {
+		if len(out) == 0 || out[len(out)-1] != note {
+			if len(out) > 0 && out[len(out)-1] != "" {
+				out = append(out, "")
 			}
+			out = append(out, note)
 		}
-		if ln == docCodeOmittedSentinel {
+	}
+	for _, raw := range lines {
+		ln := raw
+		if inOmitBlock {
+			if ln == docCodeOmittedSentinel {
+				inOmitBlock = false
+			}
+			continue // body lines of an omitted block are dropped
+		}
+		if strings.HasPrefix(ln, docCodeOmittedSentinel) {
+			inOmitBlock = true
 			for len(out) > 0 && out[len(out)-1] == "" {
 				out = out[:len(out)-1]
 			}
+			// Drop the lead-in line ending in ':' directly above an omitted
+			// block -- but only when it starts its own sentence. A colon
+			// line continuing a wrapped sentence must stay.
 			if n := len(out); n > 0 && strings.HasSuffix(out[n-1], ":") {
-				out = out[:n-1]
-				for len(out) > 0 && out[len(out)-1] == "" {
-					out = out[:len(out)-1]
+				prev := ""
+				if n >= 2 {
+					prev = out[n-2]
+				}
+				if prev == "" || sentenceEndRE.MatchString(prev) {
+					out = out[:n-1]
+					for len(out) > 0 && out[len(out)-1] == "" {
+						out = out[:len(out)-1]
+					}
 				}
 			}
-			note := "Code example omitted: written in C++."
-			if len(out) == 0 || out[len(out)-1] != note {
-				if len(out) > 0 && out[len(out)-1] != "" {
-					out = append(out, "")
-				}
-				out = append(out, note)
+			switch {
+			case strings.HasSuffix(ln, "cpp"):
+				omitNote = "Code example omitted: written in C++."
+			case strings.HasSuffix(ln, "py"):
+				omitNote = "Code example omitted: written in Python."
+			default:
+				omitNote = "Code example omitted."
 			}
+			pushNote(omitNote)
 			pendingNote = true
 			continue
+		}
+		if pendingNote {
+			if strings.TrimSpace(ln) == "" {
+				continue
+			}
+			if strings.HasSuffix(strings.TrimSpace(ln), ":") {
+				continue // follow-on lead-in like "will produce:" after a note
+			}
+			pendingNote = false
+			if len(out) > 0 && out[len(out)-1] != "" {
+				out = append(out, "")
+			}
 		}
 		if ln == "" && len(out) > 0 && out[len(out)-1] == "" {
 			continue
