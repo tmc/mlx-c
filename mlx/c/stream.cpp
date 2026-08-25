@@ -84,10 +84,17 @@ extern "C" mlx_stream mlx_stream_new(void) {
 }
 
 extern "C" mlx_stream mlx_stream_new_device(mlx_device dev) {
+  // Delegates to the thread-unsafe constructor: stream handles returned by
+  // the C API are not tied to the creating thread (see default_stream_for).
+  // Keeping one implementation means a future revert of this divergence to
+  // upstream's new_stream semantics touches exactly this function, while
+  // mlx_stream_new_thread_unsafe_device stays the explicit spelling of the
+  // parallelism contract.
+  return mlx_stream_new_thread_unsafe_device(dev);
+}
+
+extern "C" mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev) {
   try {
-    // new_thread_unsafe_stream rather than new_stream: see
-    // default_stream_for. Stream handles returned by the C API are not tied
-    // to the creating thread.
     return mlx_stream_new_(
         mlx::core::new_thread_unsafe_stream(mlx_device_get_(dev)));
   } catch (std::exception& e) {
@@ -95,6 +102,43 @@ extern "C" mlx_stream mlx_stream_new_device(mlx_device dev) {
     return mlx_stream_new_();
   }
 }
+
+extern "C" mlx_thread_local_stream mlx_thread_local_stream_new(mlx_device dev) {
+  try {
+    return mlx_thread_local_stream_new_(
+        mlx::core::new_thread_local_stream(mlx_device_get_(dev)));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return mlx_thread_local_stream_invalid_();
+  }
+}
+
+extern "C" bool mlx_thread_local_stream_is_valid(
+    mlx_thread_local_stream stream) {
+  return stream.index >= 0;
+}
+
+extern "C" int mlx_thread_local_stream_resolve(
+    mlx_stream* stream,
+    const mlx_thread_local_stream* thread_local_stream) {
+  if (!mlx_thread_local_stream_is_valid(*thread_local_stream)) {
+    mlx_error("expected a valid mlx_thread_local_stream");
+    return 1;
+  }
+  try {
+    mlx_stream_set_(
+        *stream,
+        mlx::core::stream_from_thread_local_stream(
+            mlx_thread_local_stream_get_(*thread_local_stream)));
+  } catch (std::exception& e) {
+    mlx_stream_free_(*stream);
+    *stream = mlx_stream_new_();
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
 extern "C" int mlx_stream_set(mlx_stream* stream, const mlx_stream src) {
   try {
     mlx_stream_set_(*stream, mlx_stream_get_(src));
@@ -143,6 +187,37 @@ extern "C" int mlx_synchronize(mlx_stream stream) {
   }
   return 0;
 }
+
+extern "C" int mlx_synchronize_default(void) {
+  try {
+    // Not mlx::core::synchronize(): that resolves the default through
+    // default_stream(), which is thread-local, so on a thread that has not
+    // gone through the C API it would synchronize a lazily created stream
+    // rather than the default every other entry point here hands out.
+    mlx::core::synchronize(
+        effective_default_stream(mlx::core::default_device()));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
+extern "C" int mlx_thread_local_stream_synchronize(
+    const mlx_thread_local_stream* stream) {
+  if (!mlx_thread_local_stream_is_valid(*stream)) {
+    mlx_error("expected a valid mlx_thread_local_stream");
+    return 1;
+  }
+  try {
+    mlx::core::synchronize(mlx_thread_local_stream_get_(*stream));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
 extern "C" int mlx_get_default_stream(mlx_stream* stream, mlx_device dev) {
   try {
     mlx_stream_set_(*stream, effective_default_stream(mlx_device_get_(dev)));
@@ -178,6 +253,7 @@ extern "C" mlx_stream mlx_default_cpu_stream_new(void) {
     return mlx_stream_new_();
   }
 }
+
 extern "C" mlx_stream mlx_default_gpu_stream_new(void) {
   try {
     return mlx_stream_new_(

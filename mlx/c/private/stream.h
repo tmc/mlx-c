@@ -52,4 +52,30 @@ inline void mlx_stream_free_(mlx_stream d) {
   }
 }
 
+// The descriptor a failed mlx_thread_local_stream_new returns. A negative
+// index is not a stream MLX can produce, which is what makes it a sentinel;
+// mlx_thread_local_stream_is_valid is the C-visible spelling of this test.
+inline mlx_thread_local_stream mlx_thread_local_stream_invalid_() {
+  return mlx_thread_local_stream{-1, MLX_CPU, 0};
+}
+
+inline mlx_thread_local_stream mlx_thread_local_stream_new_(
+    mlx::core::ThreadLocalStream s) {
+  return mlx_thread_local_stream{
+      static_cast<int>(s.index),
+      static_cast<mlx_device_type>(s.device.type),
+      static_cast<int>(s.device.index)};
+}
+
+// Reconstructs the C++ ThreadLocalStream value from its plain-struct form.
+// stream_from_thread_local_stream resolves it to the owning thread's Stream.
+inline mlx::core::ThreadLocalStream mlx_thread_local_stream_get_(
+    mlx_thread_local_stream d) {
+  return mlx::core::ThreadLocalStream(
+      d.index,
+      mlx::core::Device(
+          static_cast<mlx::core::Device::DeviceType>(d.device_type),
+          d.device_index));
+}
+
 #endif
