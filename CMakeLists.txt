@@ -55,6 +55,7 @@ set(mlxc-src
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/error.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/event.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/export.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/mlx/c/stream_debug_trace.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/fast.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/fft.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/graph_utils.cpp
