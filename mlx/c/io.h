@@ -28,14 +28,24 @@ extern "C" {
  */
 /**@{*/
 
+/**
+ * Load array from reader in .npy format
+ */
 int mlx_load_reader(
     mlx_array* res,
     mlx_io_reader in_stream,
     const mlx_stream s);
+
+/**
+ * Load array from file in .npy format
+ */
 int mlx_load(mlx_array* res, const char* file, const mlx_stream s);
 
 int mlx_load_gguf(mlx_io_gguf* gguf, const char* file, const mlx_stream s);
 
+/**
+ * Load array map from .safetensors file format
+ */
 int mlx_load_safetensors_reader(
     mlx_map_string_to_array* res_0,
     mlx_map_string_to_string* res_1,
@@ -46,7 +56,15 @@ int mlx_load_safetensors(
     mlx_map_string_to_string* res_1,
     const char* file,
     const mlx_stream s);
+
+/**
+ * Save array to out stream in .npy format
+ */
 int mlx_save_writer(mlx_io_writer out_stream, const mlx_array a);
+
+/**
+ * Save array to file in .npy format
+ */
 int mlx_save(const char* file, const mlx_array a);
 int mlx_save_gguf(const char* file, mlx_io_gguf gguf);
 

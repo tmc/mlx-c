@@ -38,12 +38,17 @@ int mlx_linalg_cholesky_inv(
     const mlx_array a,
     bool upper,
     const mlx_stream s);
+
+/**
+ * Compute the cross product of two arrays along the given axis.
+ */
 int mlx_linalg_cross(
     mlx_array* res,
     const mlx_array a,
     const mlx_array b,
     int axis,
     const mlx_stream s);
+int mlx_linalg_det(mlx_array* res, const mlx_array a, const mlx_stream s);
 int mlx_linalg_eig(
     mlx_array* res_0,
     mlx_array* res_1,
@@ -68,6 +73,18 @@ int mlx_linalg_lu_factor(
     mlx_array* res_1,
     const mlx_array a,
     const mlx_stream s);
+
+/**
+ * Compute vector or matrix norms.
+ *
+ * - If axis and ord are both unspecified, computes the 2-norm of flatten(x).
+ * - If axis is not provided but ord is, then x must be either 1D or 2D.
+ * - If axis is provided, but ord is not, then the 2-norm (or Frobenius norm
+ * for matrices) is computed along the given axes. At most 2 axes can be
+ * specified.
+ * - If both axis and ord are provided, then the corresponding matrix or vector
+ * norm is computed. At most 2 axes can be specified.
+ */
 int mlx_linalg_norm(
     mlx_array* res,
     const mlx_array a,
@@ -93,6 +110,11 @@ int mlx_linalg_norm_l2(
     const mlx_stream s);
 int mlx_linalg_pinv(mlx_array* res, const mlx_array a, const mlx_stream s);
 int mlx_linalg_qr(
+    mlx_array* res_0,
+    mlx_array* res_1,
+    const mlx_array a,
+    const mlx_stream s);
+int mlx_linalg_slogdet(
     mlx_array* res_0,
     mlx_array* res_1,
     const mlx_array a,
