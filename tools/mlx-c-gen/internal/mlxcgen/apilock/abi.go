@@ -66,6 +66,8 @@ func ClassifyParam(param string) string {
 // entryFromFunction builds an ABIEntry from a parsed declaration, computing
 // fallibility from the impl body when one is available.
 func entryFromFunction(fn Function, class ABIClass, body string) ABIEntry {
+	// Params keep declared order; the call-helper argument split is
+	// positional, so reordering here would lose information.
 	e := ABIEntry{
 		Params:   append([]string(nil), fn.Parameters...),
 		Return:   fn.Return,
@@ -73,7 +75,6 @@ func entryFromFunction(fn Function, class ABIClass, body string) ABIEntry {
 		Class:    class,
 		Fallible: isStatusReturn(fn.Return),
 	}
-	sort.Strings(e.Params)
 	for _, p := range e.Params {
 		switch ClassifyParam(p) {
 		case "float":
