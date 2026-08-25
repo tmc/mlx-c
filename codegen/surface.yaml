@@ -1,0 +1,5 @@
+# Surface classification for shipped headers.
+# class: api (default) carries an API stability contract; diagnostic does not.
+headers:
+  stream_debug_trace.h:
+    class: diagnostic

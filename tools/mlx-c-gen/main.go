@@ -28,6 +28,7 @@ import (
 	"github.com/tmc/mlx-c/tools/mlx-c-gen/internal/mlxcgen/regenreport"
 	"github.com/tmc/mlx-c/tools/mlx-c-gen/internal/mlxcgen/symbols"
 	"github.com/tmc/mlx-c/tools/mlx-c-gen/internal/mlxcgen/types"
+	"gopkg.in/yaml.v3"
 )
 
 var standaloneGenerators = map[string]func(mode string) string{
@@ -491,43 +492,42 @@ func runGenerate(args []string) error {
 	}
 
 	// Emit abi.json next to the generated headers: a machine-readable ABI
-	// manifest (per-symbol parameter classification) describing exactly this
-	// output tree. Consumers pin it by the same SHA as the headers, so it
-	// cannot drift from them.
+	// manifest describing every function the shipped headers declare --
+	// generated and hand-written alike -- classified by argument class,
+	// failure contract, and stability tier. It ships inside the output tree
+	// so consumers can pin it by the same SHA as the headers.
 	if success && !*dryRun {
-		var abiHeaders []string
-		for _, hm := range headerMappings {
-			abiHeaders = append(abiHeaders, filepath.Join(outDir, hm.Name+".h"))
-		}
-		for _, name := range standaloneNames {
-			abiHeaders = append(abiHeaders, filepath.Join(outDir, name+".h"))
-		}
-		for _, out := range customspec.GeneratedHeaders(customSpecs) {
-			path, err := customHeaderOutputPath(outDir, out)
-			if err != nil {
-				continue
+		classes := map[string]apilock.ABIClass{}
+		surfacePath := filepath.Join(root, "codegen", "surface.yaml")
+		if data, err := os.ReadFile(surfacePath); err == nil {
+			var surface struct {
+				Headers map[string]struct {
+					Class string `yaml:"class"`
+				} `yaml:"headers"`
 			}
-			abiHeaders = append(abiHeaders, path)
-		}
-		var fns []apilock.Function
-		for _, hp := range abiHeaders {
-			data, err := os.ReadFile(hp)
-			if err != nil {
-				continue
+			if err := yaml.Unmarshal(data, &surface); err != nil {
+				return fmt.Errorf("parse %s: %w", surfacePath, err)
 			}
-			target, err := apilock.ParseHeaderContent(filepath.Base(hp), data)
-			if err != nil {
-				fmt.Printf("  WARNING: could not parse %s for abi.json: %v\n", hp, err)
-				continue
+			for h, spec := range surface.Headers {
+				switch spec.Class {
+				case "diagnostic":
+					classes[h] = apilock.ABIClassDiagnostic
+				case "", "api":
+					classes[h] = apilock.ABIClassAPI
+				default:
+					return fmt.Errorf("%s: unknown class %q for %s", surfacePath, spec.Class, h)
+				}
 			}
-			fns = append(fns, target.Functions...)
 		}
-		abiJSON, err := apilock.ABIFromFunctions(fns).JSON()
+		abi, err := apilock.BuildABI(outDir, classes)
+		if err != nil {
+			return fmt.Errorf("build abi.json: %w", err)
+		}
+		abiJSON, err := abi.JSON()
 		if err != nil {
 			return fmt.Errorf("encode abi.json: %w", err)
 		}
-		abiPath := filepath.Join(outDir, "abi.json")
-		if err := os.WriteFile(abiPath, append(abiJSON, '\n'), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(outDir, "abi.json"), append(abiJSON, '\n'), 0644); err != nil {
 			return fmt.Errorf("write abi.json: %w", err)
 		}
 	}
