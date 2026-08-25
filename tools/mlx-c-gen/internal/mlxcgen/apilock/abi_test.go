@@ -2,6 +2,9 @@ package apilock
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -27,42 +30,95 @@ func TestClassifyParam(t *testing.T) {
 	}
 }
 
-func TestExtractImplBody(t *testing.T) {
+func TestExtractImplBodies(t *testing.T) {
 	impl := `extern "C" mlx_event mlx_event_new(mlx_stream stream) {
-  try {
-    return mlx_event_new_(x);
-  } catch (std::exception& e) {
+  try { return w(); } catch (std::exception& e) {
     mlx_error(e.what());
     return mlx_event({nullptr});
   }
 }
 
 extern "C" int mlx_event_free(mlx_event event);
-// a call site, not a definition:
+
 void f(void) { mlx_event_new(s); }
 `
-	if got := ExtractImplBody(impl, "mlx_event_new"); got == "" {
-		t.Error("mlx_event_new body not found")
-	} else if !contains(got, "mlx_error") {
-		t.Errorf("body missing error path: %q", got)
+	got := ExtractImplBodies(impl, "mlx_event_new")
+	if len(got) != 1 || !strings.Contains(got[0], "mlx_error") {
+		t.Errorf("bodies = %q, want one body with error path", got)
 	}
-	if got := ExtractImplBody(impl, "mlx_event_free"); got != "" {
-		t.Errorf("declaration-only function returned body %q", got)
+	if got := ExtractImplBodies(impl, "mlx_event_free"); got != nil {
+		t.Errorf("declaration-only function returned %v", got)
+	}
+	if got := ExtractImplBodies(impl, "f"); got != nil {
+		t.Errorf("unrelated function matched: %v", got)
 	}
 }
 
-func contains(s, sub string) bool { return len(sub) == 0 || indexOf(s, sub) >= 0 }
-func indexOf(s, sub string) int {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return i
+func TestExtractImplBodiesMultiple(t *testing.T) {
+	impl := `extern "C" uint64_t f(void) { return 1; }
+extern "C" uint64_t f(void) { mlx_error("x"); return 2; }
+`
+	bodies := ExtractImplBodies(impl, "f")
+	if len(bodies) != 2 {
+		t.Fatalf("got %d bodies, want 2", len(bodies))
+	}
+	if got := ExtractImplBodies(impl, "g"); got != nil {
+		t.Errorf("unknown function returned %v", got)
+	}
+}
+
+func TestFallibleTransitivity(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, content string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+			t.Fatal(err)
 		}
 	}
-	return -1
+	write("stream.h", `#ifndef S_H
+#define S_H
+mlx_stream mlx_stream_new(void);
+mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev);
+mlx_stream mlx_stream_new_device(mlx_device dev);
+#endif
+`)
+	write("stream.cpp", `extern "C" mlx_stream mlx_stream_new(void) {
+  return mlx_stream_new_();
 }
 
-func TestEntryFromFunction(t *testing.T) {
-	fn := Function{
+extern "C" mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev) {
+  try {
+    return mlx_stream_new_(new_stream(dev));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return mlx_stream_new_();
+  }
+}
+
+extern "C" mlx_stream mlx_stream_new_device(mlx_device dev) {
+  return mlx_stream_new_thread_unsafe_device(dev);
+}
+`)
+	abi, err := BuildABI(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]bool{
+		"mlx_stream_new":                      false,
+		"mlx_stream_new_thread_unsafe_device": true,
+		"mlx_stream_new_device":               true,
+	} {
+		e, ok := abi.Functions[name]
+		if !ok {
+			t.Fatalf("%s missing from manifest", name)
+		}
+		if e.Fallible != want {
+			t.Errorf("%s fallible = %v, want %v", name, e.Fallible, want)
+		}
+	}
+}
+
+func TestEntryClassification(t *testing.T) {
+	src := abiSource{fn: Function{
 		Name:   "mlx_fast_scaled_dot_product_attention",
 		Return: "int",
 		Parameters: []string{
@@ -71,39 +127,37 @@ func TestEntryFromFunction(t *testing.T) {
 			"const mlx_array mask_arr", "const mlx_array sinks",
 			"bool force_fused", "const mlx_stream s",
 		},
-	}
-	e := entryFromFunction(fn, ABIClassAPI, "")
+	}}
+	src.fallible = isStatusReturn(src.fn.Return)
+	e := src.entry()
 	if e.IntegerClassCount != 9 || e.FloatClassCount != 1 {
 		t.Errorf("got %d/%d, want 9/1", e.IntegerClassCount, e.FloatClassCount)
 	}
 	if !e.Fallible {
 		t.Error("int-returning function must be fallible")
 	}
-	if e.Class != ABIClassAPI {
-		t.Errorf("class = %q, want api", e.Class)
-	}
-
-	byValue := Function{Name: "mlx_event_new", Return: "mlx_event",
-		Parameters: []string{"mlx_stream stream"}}
-	e2 := entryFromFunction(byValue, ABIClassAPI, "mlx_error(e.what());")
-	if !e2.Fallible {
-		t.Error("by-value with error path must be fallible")
-	}
-	e3 := entryFromFunction(Function{Name: "mlx_stream_new", Return: "mlx_stream"},
-		ABIClassAPI, "return mlx_stream_new_();")
-	if e3.Fallible {
-		t.Error("by-value without error path must not be fallible")
-	}
 	data, err := ABIMap{SchemaVersion: ABISchemaVersion,
 		Functions: map[string]ABIEntry{"a": e}}.JSON()
 	if err != nil {
 		t.Fatal(err)
 	}
-	var back ABIMap
+	var back struct {
+		SchemaVersion int                     `json:"schema_version"`
+		Functions     map[string]ABIEntryJSON `json:"functions"`
+	}
 	if err := json.Unmarshal(data, &back); err != nil {
 		t.Fatal(err)
 	}
-	if back.SchemaVersion != ABISchemaVersion || back.Functions["a"].Fallible != true {
-		t.Errorf("roundtrip mismatch: %+v", back)
+	if back.SchemaVersion != ABISchemaVersion {
+		t.Errorf("schema version = %d", back.SchemaVersion)
+	}
+	fall, present := back.Functions["a"]["fallible"]
+	if !present {
+		t.Error("fallible must be emitted even when false")
+	}
+	if v, ok := fall.(bool); !ok || !v {
+		t.Errorf("fallible = %v, want true", fall)
 	}
 }
+
+type ABIEntryJSON = map[string]interface{}
