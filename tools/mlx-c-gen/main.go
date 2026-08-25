@@ -490,6 +490,48 @@ func runGenerate(args []string) error {
 		fmt.Println()
 	}
 
+	// Emit abi.json next to the generated headers: a machine-readable ABI
+	// manifest (per-symbol parameter classification) describing exactly this
+	// output tree. Consumers pin it by the same SHA as the headers, so it
+	// cannot drift from them.
+	if success && !*dryRun {
+		var abiHeaders []string
+		for _, hm := range headerMappings {
+			abiHeaders = append(abiHeaders, filepath.Join(outDir, hm.Name+".h"))
+		}
+		for _, name := range standaloneNames {
+			abiHeaders = append(abiHeaders, filepath.Join(outDir, name+".h"))
+		}
+		for _, out := range customspec.GeneratedHeaders(customSpecs) {
+			path, err := customHeaderOutputPath(outDir, out)
+			if err != nil {
+				continue
+			}
+			abiHeaders = append(abiHeaders, path)
+		}
+		var fns []apilock.Function
+		for _, hp := range abiHeaders {
+			data, err := os.ReadFile(hp)
+			if err != nil {
+				continue
+			}
+			target, err := apilock.ParseHeaderContent(filepath.Base(hp), data)
+			if err != nil {
+				fmt.Printf("  WARNING: could not parse %s for abi.json: %v\n", hp, err)
+				continue
+			}
+			fns = append(fns, target.Functions...)
+		}
+		abiJSON, err := apilock.ABIFromFunctions(fns).JSON()
+		if err != nil {
+			return fmt.Errorf("encode abi.json: %w", err)
+		}
+		abiPath := filepath.Join(outDir, "abi.json")
+		if err := os.WriteFile(abiPath, append(abiJSON, '\n'), 0644); err != nil {
+			return fmt.Errorf("write abi.json: %w", err)
+		}
+	}
+
 	// Loud-failure guard: the freshly generated output must never shrink the
 	// API surface recorded in the tree's committed lock, except where
 	// codegen/removals.yaml declares the removal. Without this, an unbindable
