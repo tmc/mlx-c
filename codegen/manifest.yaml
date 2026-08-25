@@ -1326,8 +1326,15 @@ variant_mappings:
         suffix: "dynamic"
         doc: Apply rotary positional embeddings using per-position offsets.
     scaled_dot_product_attention:
+      # 0.32.2 inserts force_fused before the stream; the overloads never
+      # coexist, so each version binds exactly one of these under the base
+      # name.
+      - signature: "array(array, array, array, float, std::string, std::optional<array>, std::optional<array>, bool, StreamOrDevice)"
+        suffix: ""
+        optional: true
       - signature: "array(array, array, array, float, std::string, std::optional<array>, std::optional<array>, StreamOrDevice)"
         suffix: ""
+        optional: true
   mlx_core_fft:
     fft:
       - signature: "array(array, int, int, FFTNorm, StreamOrDevice)"
