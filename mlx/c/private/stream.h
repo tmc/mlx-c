@@ -53,3 +53,22 @@ inline void mlx_stream_free_(mlx_stream d) {
 }
 
 #endif
+
+inline mlx_thread_local_stream mlx_thread_local_stream_new_(
+    mlx::core::ThreadLocalStream s) {
+  return mlx_thread_local_stream{
+      static_cast<int>(s.index),
+      static_cast<mlx_device_type>(s.device.type),
+      static_cast<int>(s.device.index)};
+}
+
+// Reconstructs the C++ ThreadLocalStream value from its plain-struct form.
+// stream_from_thread_local_stream resolves it to the owning thread's Stream.
+inline mlx::core::ThreadLocalStream mlx_thread_local_stream_get_(
+    mlx_thread_local_stream d) {
+  return mlx::core::ThreadLocalStream(
+      d.index,
+      mlx::core::Device(
+          static_cast<mlx::core::Device::DeviceType>(d.device_type),
+          d.device_index));
+}

@@ -35,7 +35,10 @@ else()
   FetchContent_Declare(
     mlx
     GIT_REPOSITORY "https://github.com/ml-explore/mlx.git"
-    GIT_TAG v0.32.1)
+    GIT_TAG v0.32.1
+    PATCH_COMMAND
+      ${CMAKE_COMMAND} -DMLX_SOURCE_DIR=<SOURCE_DIR> -P
+      ${CMAKE_CURRENT_LIST_DIR}/cmake/export-mlx-event.cmake)
   FetchContent_MakeAvailable(mlx)
 endif()
 
@@ -50,6 +53,7 @@ set(mlxc-src
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/distributed.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/distributed_group.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/error.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/mlx/c/event.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/export.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/fast.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/fft.cpp

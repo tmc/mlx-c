@@ -25,14 +25,54 @@ typedef struct mlx_stream_ {
 } mlx_stream;
 
 /**
+ * A MLX thread-local stream descriptor.
+ *
+ * This is a plain value naming a logical stream. Resolving it on an OS thread
+ * returns that thread's concrete stream for this descriptor.
+ *
+ * The ABI stores the device fields directly instead of embedding mlx_device,
+ * because mlx_device is an owning opaque handle while MLX ThreadLocalStream is
+ * a small copyable value.
+ */
+typedef struct mlx_thread_local_stream_ {
+  int index;
+  mlx_device_type device_type;
+  int device_index;
+} mlx_thread_local_stream;
+
+/**
  * Returns a new empty stream.
  */
 mlx_stream mlx_stream_new(void);
 
 /**
  * Returns a new stream on a device.
+ *
+ * The stream is registered for the calling thread. Work evaluated on another
+ * thread may require mlx_stream_new_thread_unsafe_device or a thread-local
+ * stream descriptor.
  */
 mlx_stream mlx_stream_new_device(mlx_device dev);
+
+/**
+ * Returns a new stream on a device that can be used from any thread.
+ */
+mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev);
+
+/**
+ * Write a new thread-local stream descriptor for a device.
+ */
+int mlx_thread_local_stream_new(
+    mlx_thread_local_stream* stream,
+    mlx_device dev);
+
+/**
+ * Resolve a thread-local stream descriptor for the current thread.
+ */
+int mlx_thread_local_stream_resolve(
+    mlx_stream* stream,
+    const mlx_thread_local_stream* thread_local_stream);
+
 /**
  * Set stream to provided src stream.
  */
@@ -61,6 +101,17 @@ int mlx_stream_get_index(int* index, mlx_stream stream);
  * Synchronize with the provided stream.
  */
 int mlx_synchronize(mlx_stream stream);
+
+/**
+ * Synchronize with the default stream.
+ */
+int mlx_synchronize_default(void);
+
+/**
+ * Synchronize with the stream corresponding to the current thread.
+ */
+int mlx_thread_local_stream_synchronize(const mlx_thread_local_stream* stream);
+
 /**
  * Returns the default stream on the given device.
  */
