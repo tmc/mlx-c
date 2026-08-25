@@ -1648,25 +1648,28 @@ int mlx_rsqrt(mlx_array* res, const mlx_array a, const mlx_stream s);
  * indices[0].ndim() + a.ndim()``. The leading dimensions of ``updates``
  * correspond to the indices, and the remaining ``a.ndim()`` dimensions are the
  * values that will be applied to the given location in ``a``.
- * For example:
  *
- * will produce:
+ * Code example omitted: written in C++.
+ *
+ * Code example omitted: written in Python.
  *
  * This scatters the two-element row vector ``[1, 2]`` starting at the ``(2,
  * 0)`` position of ``a``.
  * Adding another element to ``indices`` will scatter into another location of
  * ``a``. We also have to add an another update for the new index:
  *
- * will produce:
+ * Code example omitted: written in C++.
+ *
+ * Code example omitted: written in Python.
  *
  * To control the scatter location on an additional axis, add another index
  * array to ``indices`` and another axis to ``axes``:
  *
- * will produce:
+ * Code example omitted: written in C++.
  *
- * Items in indices are broadcasted together. This means:
+ * Code example omitted: written in Python.
  *
- * is equivalent to:
+ * Code example omitted: written in C++.
  *
  * Note, ``scatter`` does not perform bounds checking on the indices and
  * updates.  Out-of-bounds accesses on ``a`` are undefined and typically result
