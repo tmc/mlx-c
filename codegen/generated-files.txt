@@ -65,12 +65,12 @@ custom_spec_generated mlxc mlx/c/private/graph_utils.h
 handwritten_runtime mlxc mlx/c/private/io.h
 generated_support mlxc mlx/c/private/map.h
 not_owned_by_codegen mlxc mlx/c/private/mlx.h
-custom_spec_generated mlxc mlx/c/private/stream.h
+not_owned_by_codegen mlxc mlx/c/private/stream.h
 custom_spec_generated mlxc mlx/c/private/string.h
 generated_support mlxc mlx/c/private/vector.h
 generated_header_api mlxc mlx/c/random.h
 generated_header_api mlxc mlx/c/random.cpp
-custom_spec_generated mlxc mlx/c/stream.h
+not_owned_by_codegen mlxc mlx/c/stream.h
 handwritten_runtime mlxc mlx/c/stream.cpp
 custom_spec_generated mlxc mlx/c/string.h
 handwritten_runtime mlxc mlx/c/string.cpp
