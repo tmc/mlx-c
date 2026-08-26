@@ -70,8 +70,18 @@ mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev);
  * The descriptor names a stream rather than being one, and is meant to be
  * carried across threads: mlx_thread_local_stream_resolve maps it to a stream
  * belonging to whichever thread resolves it, creating that thread's stream on
- * first use. Threads therefore do not share ordering through one descriptor,
- * and one stream is allocated per resolving thread.
+ * first use. Threads therefore do not share ordering through one descriptor.
+ *
+ * Prefer mlx_stream_new_device for ordinary parallel work: a fixed set of
+ * streams, one thread submitting to each, reaches the same concurrency without
+ * pinning threads or accumulating streams. Reach for a descriptor when a
+ * per-thread stream is what you actually want.
+ *
+ * Per descriptor, one stream is allocated per resolving thread. Across D
+ * descriptors the population is bounded by D times the number of threads, and
+ * in practice lands under it, since threads are reused and not every thread
+ * resolves every descriptor. Nothing reclaims those streams: mlx_stream_free
+ * releases a handle, not the registration behind it.
  *
  * On failure, returns an invalid descriptor and sets the error handler.
  * Use mlx_thread_local_stream_is_valid to test the result.
