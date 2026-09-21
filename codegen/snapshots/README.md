@@ -23,3 +23,9 @@ baseline-delta.json compares function names and complete signature strings. Thir
 - Locks describe declarations, not actual loaded bytes. Mach-O/ELF export checks and actual library paths/hashes are separate evidence.
 
 No native runtime acceptance is inferred from these snapshots.
+
+## Candidate
+
+Wrapper implementation 18501621c3dd6bed63c2910481a1b40ba7b21e6e adds exactly six event functions and five Global default extensions. All 674 upstream function signature strings remain unchanged. Candidate snapshot contains 685 functions, SHA-256 e19c622cf34fef1a478fc848dc0c97bb1a0479d0487d6b58e412f7b255afcb50.
+
+Core implementation commit 8af4c14ae1cd89c741e409defb101f51bcc53df9 records the tested patch on v0.32.2. Default wrapper builds fetch the pristine upstream revision and apply the checked patch, SHA-256 c7e4bc0745d8da285ac5097f34cc508cdc217d32574847b28defd7514c020b69; they do not depend on fetching an unpublished core commit.
