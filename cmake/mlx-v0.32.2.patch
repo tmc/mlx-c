@@ -1,3 +1,87 @@
+diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
+index 472b3d99f..e7d8f2620 100644
+--- a/mlx/backend/cuda/device.cpp
++++ b/mlx/backend/cuda/device.cpp
+@@ -617,8 +617,10 @@ std::unordered_map<int, CommandEncoder>& get_command_encoders() {
+ }
+ 
+ std::unordered_map<int, CommandEncoder>& get_global_command_encoders() {
+-  static std::unordered_map<int, CommandEncoder> encoders;
+-  return encoders;
++  // encoders are leaked intentionally as they would synchronize on process
++  // shutdown
++  static auto* encoders = new std::unordered_map<int, CommandEncoder>();
++  return *encoders;
+ }
+ 
+ } // namespace mlx::core::cu
+diff --git a/mlx/backend/cuda/worker.cpp b/mlx/backend/cuda/worker.cpp
+index de38a06e5..29ea62986 100644
+--- a/mlx/backend/cuda/worker.cpp
++++ b/mlx/backend/cuda/worker.cpp
+@@ -14,18 +14,27 @@ Worker::~Worker() = default;
+ void Worker::start() {
+   // Note that |shared_from_this| can not be called in constructor.
+   worker_ = std::thread(&Worker::thread_fn, shared_from_this());
++#if !defined(__linux__)
+   // Detach the thread and let it free itself after finishing tasks.
+   // This is to avoid deadlock when joining threads on exit on Windows:
+   // https://developercommunity.visualstudio.com/t/1654756
+   worker_.detach();
++#endif
+ }
+ 
+ void Worker::stop() {
++#if defined(__linux__)
++  // Wait for host callbacks that still hold a raw pointer to this worker.
++  CHECK_CUDA_ERROR(cudaStreamSynchronize(signal_stream_));
++#endif
+   {
+     std::lock_guard lock(mtx_);
+     stop_ = true;
+   }
+   cond_.notify_one();
++#if defined(__linux__)
++  worker_.join();
++#endif
+ }
+ 
+ void Worker::add_task(std::function<void()> task) {
+@@ -57,14 +66,17 @@ void Worker::commit(cudaStream_t stream) {
+ }
+ 
+ void Worker::thread_fn() {
+-  while (!stop_) {
+-    uint64_t current_batch = 0;
++  uint64_t current_batch = 0;
++  while (true) {
+     Tasks tasks;
+     {
+       std::unique_lock<std::mutex> lk(mtx_);
+-      cond_.wait(lk, [this, &current_batch] {
++      cond_.wait(lk, [this, current_batch] {
+         return this->signaled_batch_ > current_batch || this->stop_;
+       });
++      if (stop_) {
++        return;
++      }
+       current_batch = signaled_batch_;
+       auto end = worker_tasks_.upper_bound(current_batch);
+       for (auto it = worker_tasks_.begin(); it != end; ++it) {
+diff --git a/mlx/backend/cuda/worker.h b/mlx/backend/cuda/worker.h
+index 54a4456ac..cea054ccf 100644
+--- a/mlx/backend/cuda/worker.h
++++ b/mlx/backend/cuda/worker.h
+@@ -23,6 +23,9 @@ class Worker : public std::enable_shared_from_this<Worker> {
+   Worker& operator=(const Worker&) = delete;
+ 
+   void start();
++  // Call once from the owning encoder after synchronization, with no further
++  // submissions. On Linux, wait for signal callbacks and worker exit.
++  // Never call from this worker or a CUDA callback.
+   void stop();
+ 
+   // Add a pending |task| that will run when consumed or commited.
 diff --git a/mlx/backend/gpu/eval.h b/mlx/backend/gpu/eval.h
 index d75b30abb..3d0b5f0ad 100644
 --- a/mlx/backend/gpu/eval.h

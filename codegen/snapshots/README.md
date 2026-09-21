@@ -9,7 +9,7 @@ These public C declarations were extracted before candidate edits. They are inde
 
 Generator: in-repository tools/mlx-c-gen at 461029853235639b05d75d7ab59d887b2b535dda. Build from an isolated checkout using `GOWORK=off go build -o "$HOME/tmp/mlx-c-gen-snapshot" ./tools/mlx-c-gen`, then run `mlx-c-gen-snapshot lock -headers /absolute/pinned/checkout/mlx/c -lock output.json`. The executable used here has SHA-256 81bd41e7912feda7761a1c06ac071186ff2b88ca0d719aa4326590db32ce0472. This CLI uses apilock.Generate, the same header parser as GenerateTarget; jaccl is optional in this tree. Do not substitute gen/main's incompatible parser.
 
-baseline-delta.json compares function names and complete signature strings. Thirteen same-name strings differ: ten operation argument layouts, Metal path output ownership, and two top-level by-value const qualifiers on compile-cache arguments. The qualifiers are not ABI layout changes. Thirty-four upstream names are added and twelve downstream names are absent upstream. A final candidate snapshot must be added before integration; no current snapshot claims to represent candidate edits.
+baseline-delta.json compares function names and complete signature strings. Thirteen same-name strings differ: ten operation argument layouts, Metal path output ownership, and two top-level by-value const qualifiers on compile-cache arguments. The qualifiers are not ABI layout changes. Thirty-four upstream names are added and twelve downstream names are absent upstream. The final candidate snapshot is recorded below, separately from these two baselines.
 
 ## Required checks outside this lock
 
@@ -28,4 +28,6 @@ No native runtime acceptance is inferred from these snapshots.
 
 Wrapper implementation 18501621c3dd6bed63c2910481a1b40ba7b21e6e adds exactly six event functions and five Global default extensions. All 674 upstream function signature strings remain unchanged. Candidate snapshot contains 685 functions, SHA-256 e19c622cf34fef1a478fc848dc0c97bb1a0479d0487d6b58e412f7b255afcb50.
 
-Core implementation commit 8af4c14ae1cd89c741e409defb101f51bcc53df9 records the tested patch on v0.32.2. Default wrapper builds fetch the pristine upstream revision and apply the checked patch, SHA-256 c7e4bc0745d8da285ac5097f34cc508cdc217d32574847b28defd7514c020b69; they do not depend on fetching an unpublished core commit.
+The original core implementation was 8af4c14ae1cd89c741e409defb101f51bcc53df9, with checked patch SHA-256 c7e4bc0745d8da285ac5097f34cc508cdc217d32574847b28defd7514c020b69. Historical native receipts retain that source identity.
+
+The current checked patch adds the reviewed CUDA worker shutdown changes and produces core tree 3d974d880c8cc224c270bbdd1d7acd1d09b3a7c9 from pristine v0.32.2. Its SHA-256 is f0395620ec82d78e6520ae46ddda7dacdf0e3d7f9d6c5d00eba39a5b0ba8adcb. Default wrapper builds still fetch the pristine upstream revision and apply the checked patch; they do not depend on fetching an unpublished core commit. The public C headers and the 685-function candidate snapshot are unchanged. This source relationship does not relabel earlier native qualification.
