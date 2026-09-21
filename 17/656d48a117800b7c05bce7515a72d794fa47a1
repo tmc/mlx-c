@@ -1,0 +1,9 @@
+commit: 17656d48a117800b7c05bce7515a72d794fa47a1
+commit date: 2026-09-21T04:07:03-07:00
+agent: Codex CLI 0.155.1
+claude-code version (installed): 2.1.269
+model: GPT-6 (exact runtime variant not exposed)
+tty: none (tool execution)
+pid: 54737 (note writer)
+ITERM_SESSION_ID: w7t2p4:E829DEA8-DD9B-44D7-8254-292A4A992CAD
+manual fallback: prescribed helper exhausted twice with missing ANTHROPIC_API_KEY in this lane; root explicitly approved documented shared failure fallback
