@@ -150,6 +150,21 @@ mlx_stream mlx_default_cpu_stream_new(void);
  */
 mlx_stream mlx_default_gpu_stream_new(void);
 
+/**
+ * Process-global default extensions. Streams created by the getters can be
+ * used from any thread; callers must serialize submissions to each stream.
+ * These calls also update the calling thread's core default. They do not
+ * pin a later call to that thread. A stream passed to the global setter
+ * must be valid on every calling thread (use new_thread_unsafe).
+ * Upstream default functions remain local
+ * to the calling thread.
+ */
+int mlx_get_default_stream_global(mlx_stream* stream, mlx_device dev);
+int mlx_set_default_stream_global(mlx_stream stream);
+int mlx_synchronize_default_global(void);
+mlx_stream mlx_default_cpu_stream_new_global(void);
+mlx_stream mlx_default_gpu_stream_new_global(void);
+
 /**@}*/
 
 #ifdef __cplusplus

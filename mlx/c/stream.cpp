@@ -1,11 +1,60 @@
 /* Copyright © 2023-2024 Apple Inc. */
 
 #include <cstring>
+#include <map>
+#include <mutex>
+#include <utility>
 
 #include "mlx/c/device.h"
 #include "mlx/c/error.h"
 #include "mlx/c/private/mlx.h"
 #include "mlx/c/stream.h"
+
+namespace {
+
+// Global extension defaults use portable streams; callers serialize submission.
+mlx::core::Stream default_stream_for(mlx::core::Device d) {
+  static std::mutex mtx;
+  static std::map<std::pair<int, int>, mlx::core::Stream> defaults;
+  std::lock_guard<std::mutex> lock(mtx);
+  auto key = std::make_pair(static_cast<int>(d.type), d.index);
+  auto it = defaults.find(key);
+  if (it == defaults.end()) {
+    it = defaults.emplace(key, mlx::core::new_thread_unsafe_stream(d)).first;
+  }
+  return it->second;
+}
+
+std::mutex& default_override_mutex() {
+  static std::mutex mtx;
+  return mtx;
+}
+
+std::map<std::pair<int, int>, mlx::core::Stream>& default_overrides() {
+  static std::map<std::pair<int, int>, mlx::core::Stream> overrides;
+  return overrides;
+}
+
+mlx::core::Stream effective_default_stream(mlx::core::Device d) {
+  auto resolve = [&]() {
+    {
+      std::lock_guard<std::mutex> lock(default_override_mutex());
+      auto& overrides = default_overrides();
+      auto it =
+          overrides.find(std::make_pair(static_cast<int>(d.type), d.index));
+      if (it != overrides.end()) {
+        return it->second;
+      }
+    }
+    return default_stream_for(d);
+  };
+  auto s = resolve();
+  // Mirror only on this thread; later foreign calls may use another thread.
+  mlx::core::set_default_stream(s);
+  return s;
+}
+
+} // namespace
 
 int mlx_stream_tostring(mlx_string* str_, mlx_stream stream) {
   try {
@@ -199,6 +248,69 @@ extern "C" mlx_stream mlx_default_gpu_stream_new(void) {
   try {
     return mlx_stream_new_(
         mlx::core::default_stream(mlx::core::Device::DeviceType::gpu));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return mlx_stream_new_();
+  }
+}
+
+extern "C" int mlx_synchronize_default_global(void) {
+  try {
+    // Not mlx::core::synchronize(): that resolves the default through
+    // default_stream(), which is thread-local, so on a thread that has not
+    // gone through the C API it would synchronize a lazily created stream
+    // rather than the default every other entry point here hands out.
+    mlx::core::synchronize(
+        effective_default_stream(mlx::core::default_device()));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
+extern "C" int mlx_get_default_stream_global(mlx_stream* stream, mlx_device dev) {
+  try {
+    mlx_stream_set_(*stream, effective_default_stream(mlx_device_get_(dev)));
+    return 0;
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+}
+
+extern "C" int mlx_set_default_stream_global(mlx_stream stream) {
+  try {
+    auto s = mlx_stream_get_(stream);
+    {
+      std::lock_guard<std::mutex> lock(default_override_mutex());
+      default_overrides().insert_or_assign(
+          std::make_pair(static_cast<int>(s.device.type), s.device.index), s);
+    }
+    // Keep the core-internal (thread-local) default in sync for code inside
+    // MLX that consults default_stream() directly on this thread.
+    mlx::core::set_default_stream(s);
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
+extern "C" mlx_stream mlx_default_cpu_stream_new_global(void) {
+  try {
+    return mlx_stream_new_(
+        effective_default_stream(mlx::core::Device::DeviceType::cpu));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return mlx_stream_new_();
+  }
+}
+
+extern "C" mlx_stream mlx_default_gpu_stream_new_global(void) {
+  try {
+    return mlx_stream_new_(
+        effective_default_stream(mlx::core::Device::DeviceType::gpu));
   } catch (std::exception& e) {
     mlx_error(e.what());
     return mlx_stream_new_();

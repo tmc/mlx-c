@@ -1,0 +1,15 @@
+find_package(Threads REQUIRED)
+foreach(name stream_global categorical_stream)
+  add_executable(mlxc_test_${name} ${name}.cpp)
+  target_link_libraries(mlxc_test_${name} PRIVATE mlxc mlx Threads::Threads)
+  add_test(NAME mlxc_${name} COMMAND mlxc_test_${name})
+  set_tests_properties(mlxc_${name} PROPERTIES TIMEOUT 15)
+endforeach()
+
+# CPU streams in a GPU build use that GPU backend's event implementation.
+if(NOT MLX_BUILD_METAL AND NOT MLX_BUILD_CUDA)
+  add_executable(mlxc_test_event event.cpp)
+  target_link_libraries(mlxc_test_event PRIVATE mlxc Threads::Threads)
+  add_test(NAME mlxc_event_cpu COMMAND mlxc_test_event)
+  set_tests_properties(mlxc_event_cpu PROPERTIES TIMEOUT 15)
+endif()

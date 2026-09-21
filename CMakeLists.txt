@@ -14,6 +14,9 @@ endif()
 option(BUILD_SHARED_LIBS "Build mlx C as a shared library" OFF)
 option(MLX_C_BUILD_EXAMPLES "Build examples for mlx C" ON)
 option(MLX_C_USE_SYSTEM_MLX "Use system MLX" OFF)
+option(MLX_C_BUILD_TESTS "Build native C API tests" OFF)
+set(MLX_C_MLX_REVISION "1f8e74e3f12f31365464a6867c6579f0e9b29d85" CACHE STRING
+    "Exact MLX revision for the checked event and stream patch")
 
 # ----------------------------- mlx -----------------------------
 
@@ -35,8 +38,16 @@ else()
   FetchContent_Declare(
     mlx
     GIT_REPOSITORY "https://github.com/ml-explore/mlx.git"
-    GIT_TAG v0.32.2)
+    GIT_TAG ${MLX_C_MLX_REVISION}
+    PATCH_COMMAND ${CMAKE_COMMAND} -DMLX_SOURCE_DIR=<SOURCE_DIR>
+                  -P ${CMAKE_CURRENT_LIST_DIR}/cmake/patch-mlx.cmake)
   FetchContent_MakeAvailable(mlx)
+  # FetchContent stamps survive a manual source reset; verify on every configure.
+  if(NOT FETCHCONTENT_SOURCE_DIR_MLX)
+    set(MLX_SOURCE_DIR "${mlx_SOURCE_DIR}")
+    include(${CMAKE_CURRENT_LIST_DIR}/cmake/patch-mlx.cmake)
+    unset(MLX_SOURCE_DIR)
+  endif()
 endif()
 
 # ----------------------------- lib -----------------------------
@@ -50,6 +61,7 @@ set(mlxc-src
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/distributed.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/distributed_group.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/error.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/mlx/c/event.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/export.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/fast.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mlx/c/fft.cpp
@@ -84,6 +96,11 @@ endif()
 
 if(MLX_C_BUILD_EXAMPLES)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/examples)
+endif()
+
+if(MLX_C_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
 endif()
 
 # ----------------------------- Installation -----------------------------
