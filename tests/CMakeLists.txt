@@ -25,3 +25,11 @@ if(MLX_BUILD_METAL)
   add_test(NAME mlxc_categorical_stream_gpu COMMAND mlxc_test_categorical_stream gpu)
   set_tests_properties(mlxc_stream_global_gpu mlxc_categorical_stream_gpu PROPERTIES TIMEOUT 30)
 endif()
+
+# Compile-cache metadata is exercised with explicit CPU streams and no fusion.
+if(MLX_BUILD_CPU)
+  add_executable(mlxc_test_compile_cache compile_cache.cpp)
+  target_link_libraries(mlxc_test_compile_cache PRIVATE mlxc mlx Threads::Threads)
+  add_test(NAME mlxc_compile_cache_cpu COMMAND mlxc_test_compile_cache)
+  set_tests_properties(mlxc_compile_cache_cpu PROPERTIES TIMEOUT 15)
+endif()
