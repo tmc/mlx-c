@@ -1,29 +1,37 @@
+#include <cstring>
 #include <future>
 #include <thread>
 #include "check.h"
 #include "mlx/c/mlx.h"
 
-int main() {
-  auto dev = mlx_device_new_type(MLX_CPU, 0);
+int main(int argc, char** argv) {
+  CHECK(argc == 1 || (argc == 2 && std::strcmp(argv[1], "gpu") == 0));
+  bool gpu = argc == 2;
+  auto local_default =
+      gpu ? mlx_default_gpu_stream_new : mlx_default_cpu_stream_new;
+  auto global_default = gpu ? mlx_default_gpu_stream_new_global
+                            : mlx_default_cpu_stream_new_global;
+  auto dev = mlx_device_new_type(gpu ? MLX_GPU : MLX_CPU, 0);
   CHECK(dev.ctx);
-  auto local = mlx_default_cpu_stream_new();
+  CHECK(mlx_set_default_device(dev) == 0);
+  auto local = local_default();
   auto portable = mlx_stream_new_thread_unsafe(dev);
   CHECK(local.ctx && portable.ctx);
   CHECK(mlx_set_default_stream_global(portable) == 0);
-  auto global = mlx_default_cpu_stream_new_global();
+  auto global = global_default();
   CHECK(mlx_stream_equal(global, portable));
   CHECK(mlx_set_default_stream(local) == 0);
   std::promise<std::thread::id> ready;
   std::promise<void> release;
   auto done = release.get_future();
   std::thread worker([&] {
-    auto other = mlx_default_cpu_stream_new();
+    auto other = local_default();
     CHECK(!mlx_stream_equal(other, local));
     CHECK(!mlx_stream_equal(other, portable));
     mlx_stream result = mlx_stream_new();
     CHECK(mlx_get_default_stream_global(&result, dev) == 0);
     CHECK(mlx_stream_equal(result, portable));
-    auto mirror = mlx_default_cpu_stream_new();
+    auto mirror = local_default();
     CHECK(mlx_stream_equal(mirror, portable));
     auto input = mlx_array_new_float32(21.f);
     auto output = mlx_array_new();
@@ -46,7 +54,7 @@ int main() {
   CHECK(id != std::this_thread::get_id());
   std::cout << "creator=" << std::this_thread::get_id() << " worker=" << id
             << "\n";
-  auto still_local = mlx_default_cpu_stream_new();
+  auto still_local = local_default();
   CHECK(mlx_stream_equal(still_local, local));
   release.set_value();
   worker.join();
