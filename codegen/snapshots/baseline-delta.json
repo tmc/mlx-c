@@ -1,0 +1,109 @@
+{
+  "downstream_revision": "78f68783f44f90a7aac853d34c7679e4a3c8cd93",
+  "upstream_revision": "ebc88f10caa1b625e6b581437a8dea6df8a70085",
+  "tool_revision": "461029853235639b05d75d7ab59d887b2b535dda",
+  "removed_from_upstream": {
+    "mlx_compile_cache_current": "mlx_compile_cache mlx_compile_cache_current(void)",
+    "mlx_event_free": "int mlx_event_free(mlx_event event)",
+    "mlx_event_is_signaled": "int mlx_event_is_signaled(bool* result, mlx_event event)",
+    "mlx_event_new": "mlx_event mlx_event_new(mlx_stream stream)",
+    "mlx_event_signal": "int mlx_event_signal(mlx_event event, mlx_stream stream)",
+    "mlx_event_wait": "int mlx_event_wait(mlx_event event)",
+    "mlx_event_wait_stream": "int mlx_event_wait_stream(mlx_event event, mlx_stream stream)",
+    "mlx_stream_new_thread_unsafe_device": "mlx_stream mlx_stream_new_thread_unsafe_device(mlx_device dev)",
+    "mlx_thread_local_stream_is_valid": "bool mlx_thread_local_stream_is_valid(mlx_thread_local_stream stream)",
+    "mlx_thread_local_stream_new": "mlx_thread_local_stream mlx_thread_local_stream_new(mlx_device dev)",
+    "mlx_thread_local_stream_resolve": "int mlx_thread_local_stream_resolve(mlx_stream* stream, const mlx_thread_local_stream* thread_local_stream)",
+    "mlx_thread_local_stream_synchronize": "int mlx_thread_local_stream_synchronize(const mlx_thread_local_stream* stream)"
+  },
+  "added_upstream": {
+    "mlx_clear_streams": "int mlx_clear_streams(void)",
+    "mlx_compile_cache_new": "mlx_compile_cache mlx_compile_cache_new()",
+    "mlx_count_nonzero_axes": "int mlx_count_nonzero_axes(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, bool keepdims, const mlx_stream s)",
+    "mlx_count_nonzero_axis": "int mlx_count_nonzero_axis(mlx_array* res, const mlx_array a, int axis, bool keepdims, const mlx_stream s)",
+    "mlx_cummax_axis": "int mlx_cummax_axis(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)",
+    "mlx_cummin_axis": "int mlx_cummin_axis(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)",
+    "mlx_cumprod_axis": "int mlx_cumprod_axis(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)",
+    "mlx_cumsum_axis": "int mlx_cumsum_axis(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)",
+    "mlx_detail_compile_cache": "int mlx_detail_compile_cache(mlx_compile_cache* res)",
+    "mlx_flip_axes": "int mlx_flip_axes(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, const mlx_stream s)",
+    "mlx_flip_axis": "int mlx_flip_axis(mlx_array* res, const mlx_array a, int axis, const mlx_stream s)",
+    "mlx_get_streams": "int mlx_get_streams(mlx_vector_stream* res)",
+    "mlx_logcumsumexp_axis": "int mlx_logcumsumexp_axis(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)",
+    "mlx_median_axes": "int mlx_median_axes(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, bool keepdims, const mlx_stream s)",
+    "mlx_median_axis": "int mlx_median_axis(mlx_array* res, const mlx_array a, int axis, bool keepdims, const mlx_stream s)",
+    "mlx_stream_from_thread_local": "int mlx_stream_from_thread_local(mlx_stream* res, const mlx_stream_thread_local tls)",
+    "mlx_stream_new_thread_unsafe": "mlx_stream mlx_stream_new_thread_unsafe(mlx_device dev)",
+    "mlx_stream_thread_local_free": "int mlx_stream_thread_local_free(mlx_stream_thread_local tls)",
+    "mlx_stream_thread_local_new": "mlx_stream_thread_local mlx_stream_thread_local_new(mlx_device dev)",
+    "mlx_stream_thread_local_set": "int mlx_stream_thread_local_set(mlx_stream_thread_local* tls, const mlx_stream_thread_local src)",
+    "mlx_synchronize_thread_local": "int mlx_synchronize_thread_local(mlx_stream_thread_local tls)",
+    "mlx_trace_axes": "int mlx_trace_axes(mlx_array* res, const mlx_array a, int offset, int axis1, int axis2, mlx_dtype dtype, const mlx_stream s)",
+    "mlx_unstack_axis": "int mlx_unstack_axis(mlx_vector_array* res, const mlx_array a, int axis, const mlx_stream s)",
+    "mlx_vector_stream_append_data": "int mlx_vector_stream_append_data(mlx_vector_stream vec, const mlx_stream* data, size_t size)",
+    "mlx_vector_stream_append_value": "int mlx_vector_stream_append_value(mlx_vector_stream vec, const mlx_stream val)",
+    "mlx_vector_stream_free": "int mlx_vector_stream_free(mlx_vector_stream vec)",
+    "mlx_vector_stream_get": "int mlx_vector_stream_get(mlx_stream* res, const mlx_vector_stream vec, size_t idx)",
+    "mlx_vector_stream_new": "mlx_vector_stream mlx_vector_stream_new(void)",
+    "mlx_vector_stream_new_data": "mlx_vector_stream mlx_vector_stream_new_data(const mlx_stream* data, size_t size)",
+    "mlx_vector_stream_new_value": "mlx_vector_stream mlx_vector_stream_new_value(const mlx_stream val)",
+    "mlx_vector_stream_set": "int mlx_vector_stream_set(mlx_vector_stream* vec, const mlx_vector_stream src)",
+    "mlx_vector_stream_set_data": "int mlx_vector_stream_set_data(mlx_vector_stream* vec, const mlx_stream* data, size_t size)",
+    "mlx_vector_stream_set_value": "int mlx_vector_stream_set_value(mlx_vector_stream* vec, const mlx_stream val)",
+    "mlx_vector_stream_size": "size_t mlx_vector_stream_size(mlx_vector_stream vec)"
+  },
+  "changed_signatures": {
+    "mlx_count_nonzero": {
+      "downstream": "int mlx_count_nonzero(mlx_array* res, const mlx_array a, int axis, bool keepdims, const mlx_stream s)",
+      "upstream": "int mlx_count_nonzero(mlx_array* res, const mlx_array a, bool keepdims, const mlx_stream s)"
+    },
+    "mlx_cummax": {
+      "downstream": "int mlx_cummax(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)",
+      "upstream": "int mlx_cummax(mlx_array* res, const mlx_array a, bool reverse, bool inclusive, const mlx_stream s)"
+    },
+    "mlx_cummin": {
+      "downstream": "int mlx_cummin(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)",
+      "upstream": "int mlx_cummin(mlx_array* res, const mlx_array a, bool reverse, bool inclusive, const mlx_stream s)"
+    },
+    "mlx_cumprod": {
+      "downstream": "int mlx_cumprod(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)",
+      "upstream": "int mlx_cumprod(mlx_array* res, const mlx_array a, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)"
+    },
+    "mlx_cumsum": {
+      "downstream": "int mlx_cumsum(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)",
+      "upstream": "int mlx_cumsum(mlx_array* res, const mlx_array a, bool reverse, bool inclusive, mlx_optional_dtype dtype, const mlx_stream s)"
+    },
+    "mlx_detail_compile_clear_cache": {
+      "downstream": "int mlx_detail_compile_clear_cache(mlx_compile_cache cache)",
+      "upstream": "int mlx_detail_compile_clear_cache(const mlx_compile_cache cache)"
+    },
+    "mlx_detail_compile_erase": {
+      "downstream": "int mlx_detail_compile_erase(mlx_compile_cache cache, uintptr_t fun_id)",
+      "upstream": "int mlx_detail_compile_erase(const mlx_compile_cache cache, uintptr_t fun_id)"
+    },
+    "mlx_flip": {
+      "downstream": "int mlx_flip(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, const mlx_stream s)",
+      "upstream": "int mlx_flip(mlx_array* res, const mlx_array a, const mlx_stream s)"
+    },
+    "mlx_logcumsumexp": {
+      "downstream": "int mlx_logcumsumexp(mlx_array* res, const mlx_array a, int axis, bool reverse, bool inclusive, const mlx_stream s)",
+      "upstream": "int mlx_logcumsumexp(mlx_array* res, const mlx_array a, bool reverse, bool inclusive, const mlx_stream s)"
+    },
+    "mlx_median": {
+      "downstream": "int mlx_median(mlx_array* res, const mlx_array a, const int* axes, size_t axes_num, bool keepdims, const mlx_stream s)",
+      "upstream": "int mlx_median(mlx_array* res, const mlx_array a, bool keepdims, const mlx_stream s)"
+    },
+    "mlx_metal_get_metallib_path": {
+      "downstream": "int mlx_metal_get_metallib_path(const char** res)",
+      "upstream": "int mlx_metal_get_metallib_path(mlx_string* res)"
+    },
+    "mlx_trace": {
+      "downstream": "int mlx_trace(mlx_array* res, const mlx_array a, int offset, int axis1, int axis2, mlx_dtype dtype, const mlx_stream s)",
+      "upstream": "int mlx_trace(mlx_array* res, const mlx_array a, const mlx_stream s)"
+    },
+    "mlx_unstack": {
+      "downstream": "int mlx_unstack(mlx_vector_array* res, const mlx_array a, int axis, const mlx_stream s)",
+      "upstream": "int mlx_unstack(mlx_vector_array* res, const mlx_array a, const mlx_stream s)"
+    }
+  }
+}
