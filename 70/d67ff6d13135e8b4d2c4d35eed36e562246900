@@ -1,0 +1,9 @@
+commit: 70d67ff6d13135e8b4d2c4d35eed36e562246900
+date: 2026-09-21T04:15:38.253313-07:00
+agent: Codex; model: GPT-6
+claude-code version: 2.1.269
+tty: none
+pid: 67667
+ITERM_SESSION_ID: w7t2p4:E829DEA8-DD9B-44D7-8254-292A4A992CAD
+Manual fallback authorized: helper attempts exhausted for absent Anthropic key.
+Native qualification: no_gpu CPU only; private graph placement does not qualify GPU affinity.
