@@ -12,7 +12,7 @@ import unittest
 
 
 PRISTINE = "1f8e74e3f12f31365464a6867c6579f0e9b29d85"
-PATCHED = "3d974d880c8cc224c270bbdd1d7acd1d09b3a7c9"
+PATCHED = "b76656e61d0aed0cd9fb74ae7554ad08429de97e"
 ROOT = Path(__file__).resolve().parents[1]
 CORE_REPO = None
 
@@ -71,7 +71,7 @@ class CorePatchTest(unittest.TestCase):
         self.assertIn("already applied", result.stdout)
         self.assertEqual(self.snapshot(), before)
         # Tree equality covers every tracked byte, path, mode and symlink,
-        # rather than only the seven files checked by the application recipe.
+        # rather than only the eight files checked by the application recipe.
         self.git("add", "-u")
         self.assertEqual(self.git("write-tree"), self.git("rev-parse", PATCHED + "^{tree}"))
 

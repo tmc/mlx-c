@@ -11,12 +11,13 @@ if(NOT status EQUAL 0 OR NOT revision STREQUAL "1f8e74e3f12f31365464a6867c6579f0
 endif()
 set(patch "${CMAKE_CURRENT_LIST_DIR}/mlx-v0.32.2.patch")
 file(SHA256 "${patch}" patch_hash)
-if(NOT patch_hash STREQUAL "f0395620ec82d78e6520ae46ddda7dacdf0e3d7f9d6c5d00eba39a5b0ba8adcb")
+if(NOT patch_hash STREQUAL "45d96fd272cc8f1918f497c0e1df4ca0570fec0c89e14e4874c5d0c1bbced95f")
   message(FATAL_ERROR "MLX patch checksum mismatch")
 endif()
-# Resulting tracked source matches core 3d974d880c8cc224c270bbdd1d7acd1d09b3a7c9.
+# Resulting tracked source matches core b76656e61d0aed0cd9fb74ae7554ad08429de97e.
 set(paths
   mlx/backend/cuda/device.cpp
+  mlx/backend/cuda/rope.cu
   mlx/backend/cuda/worker.cpp
   mlx/backend/cuda/worker.h
   mlx/backend/gpu/eval.h
@@ -25,6 +26,7 @@ set(paths
   tests/random_tests.cpp)
 set(pristine
   6a5033019724d0c8e5282744f2e7f22427e9e6aa7a824f1b32d85f87c804594b
+  79cb9ec596574b06aaec6e804dde9b4ef661b72522adc712545424ffbf894879
   408b47b67f6d6ae8afe59f3b51c8d28b0488d6b779f207e7101fbe9d9d9e093d
   9dc4107113c697184241d7023d3eaf4237c3a7447ba59f3390d231fe150b0a22
   8c18ac14ca85348cda4ccf6fb87badf30fbc5723b2f35254145871c2444bdbe3
@@ -33,6 +35,7 @@ set(pristine
   3fc4e7fb0481fff61dbe6b3776b152ef018e142db89bdc7b9bedbcc9c2374e9d)
 set(patched
   35705bc794d7cf49d1351771ee80ca7fa8c5083ca6b931eaf691616adf54d28e
+  f3d7b0c4f2beafe8f84d1fa727271c0efc4fc4f3eb1035e498d8dd46a3b16c08
   253f932f0a3c20f6b690c0f36a015e2de22e030f63ce62baee9f24e5605b4179
   490b1d11914bca6506bf69fefa5f2369f5fc589ccf1ea82515333e90ccb9e27c
   681239fe618b4183107641a7a414c936b4fb95ccc508992f53982d978ea44d76
@@ -72,7 +75,7 @@ if(NOT status EQUAL 0 OR NOT metadata STREQUAL "")
 endif()
 set(all_pristine TRUE)
 set(all_patched TRUE)
-foreach(i RANGE 0 6)
+foreach(i RANGE 0 7)
   list(GET paths ${i} path)
   list(GET pristine ${i} before)
   list(GET patched ${i} after)
@@ -101,7 +104,7 @@ execute_process(COMMAND "${GIT_EXECUTABLE}" apply "${patch}"
 if(NOT status EQUAL 0)
   message(FATAL_ERROR "MLX patch application failed")
 endif()
-foreach(i RANGE 0 6)
+foreach(i RANGE 0 7)
   list(GET paths ${i} path)
   list(GET patched ${i} expected)
   file(SHA256 "${MLX_SOURCE_DIR}/${path}" actual)
