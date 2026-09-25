@@ -1,13 +1,16 @@
 #include "mlx/mlx.h"
 #include "mlx/allocator.h"
 #include "mlx/memory.h"
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
+#include <future>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 using namespace mlx::core;
 
@@ -144,11 +147,73 @@ int derived_error(const std::string& path) {
   return silent==0 ? 0 : 1;
 }
 
+// A reader whose offset reads block until a gate opens, or give up after a
+// timeout so a failing run still ends.
+struct GatedReader : io::Reader {
+  std::string bytes;
+  size_t pos=0;
+  std::shared_future<void> gate;
+  GatedReader(std::string b,std::shared_future<void> g) : bytes(std::move(b)),gate(std::move(g)) {}
+  bool is_open() const override { return true; }
+  bool good() const override { return pos<=bytes.size(); }
+  size_t tell() override { return pos; }
+  void seek(int64_t off,std::ios_base::seekdir way) override {
+    pos = way==std::ios_base::beg ? off : way==std::ios_base::end ? bytes.size()+off : pos+off;
+  }
+  void read(char* data,size_t n) override {
+    if(pos+n>bytes.size()) throw std::runtime_error("gated reader: eof");
+    std::memcpy(data,bytes.data()+pos,n);
+    pos+=n;
+  }
+  void read(char* data,size_t n,size_t off) override {
+    gate.wait_for(std::chrono::seconds(3));
+    std::memcpy(data,bytes.data()+off,n);
+  }
+  std::string label() const override { return "gated reader"; }
+};
+
+// A path load must not wait behind reads through a custom reader that block.
+// Eight blocked reads fill the four-thread io pool that every Load used, so
+// the path load's read ran only after they gave up.
+int reader_pool(const std::string& dir) {
+  set_default_device(Device::cpu);
+  std::unordered_map<std::string,array> tensors;
+  for(int i=0;i<8;++i) tensors.insert({"s"+std::to_string(i),full({16},float(i),float32)});
+  auto blocked_path=dir+"/reader_pool_blocked.safetensors";
+  auto path=dir+"/reader_pool_path.safetensors";
+  save_safetensors(blocked_path,tensors);
+  save_safetensors(path,{{"f",full({16},1.f,float32)}});
+  std::string bytes;
+  {
+    std::ifstream in(blocked_path,std::ios::binary);
+    bytes.assign(std::istreambuf_iterator<char>(in),{});
+  }
+  std::promise<void> open;
+  auto reader=std::make_shared<GatedReader>(bytes,open.get_future().share());
+  auto blocked=load_safetensors(reader,new_stream(Device::cpu)).first;
+  auto f=load_safetensors(path).first.at("f");
+  std::vector<array> all;
+  for(auto& [k,v] : blocked) all.push_back(v);
+  async_eval(all);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  auto start=std::chrono::steady_clock::now();
+  eval(f);
+  auto ms=std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now()-start).count();
+  open.set_value();
+  eval(all);
+  std::filesystem::remove(blocked_path);
+  std::filesystem::remove(path);
+  std::cout << "reader_pool path_eval_ms=" << ms << std::endl;
+  return ms<1000 ? 0 : 1;
+}
+
 int main(int argc,char**argv) {
   if(argc<2) return 2;
   std::string mode=argv[1];
   if(mode=="short-read" && argc==3) return short_read(argv[2]);
   if(mode=="derived-error" && argc==3) return derived_error(argv[2]);
+  if(mode=="reader-pool" && argc==3) return reader_pool(argv[2]);
   if(mode=="assignment") return assignment();
   if(mode=="attention") return attention();
   if(mode=="scan") return scan(false);

@@ -40,6 +40,11 @@ Provenance, in file order:
       read threw) returned without an error about a quarter of the time.
       Still on upstream main 073d2252c.
       Maintained fork patch, not upstream; re-check on each MLX pin bump
+  mlx/backend/common/load.cpp, Load::eval_cpu
+      run reads through custom readers on their own pool; they shared the
+      four-thread io pool with path loads, so a slow reader (a Go callback)
+      stalled unrelated path loads. Still on upstream main 073d2252c.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
 
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
 index 472b3d9..babe63e 100644
@@ -913,3 +918,42 @@ index d1e43fa02..286224334 100644
  };
  
  } // namespace mlx::core::metal
+diff --git a/mlx/backend/common/load.cpp b/mlx/backend/common/load.cpp
+index b53c92483..448171f53 100644
+--- a/mlx/backend/common/load.cpp
++++ b/mlx/backend/common/load.cpp
+@@ -3,6 +3,7 @@
+ #include <algorithm>
+ #include <utility>
+ 
++#include "mlx/io/load.h"
+ #include "mlx/primitives.h"
+ #include "mlx/scheduler.h"
+ 
+@@ -23,6 +24,14 @@ void swap_endianness(uint8_t* data_bytes, size_t N) {
+   }
+ }
+ 
++// Reads through a custom reader take as long as the reader does, so they get
++// their own pool and cannot hold up path loads on io::thread_pool.
++ThreadPool& reader_pool() {
++  // Leak - see Scheduler singleton comment in scheduler.cpp.
++  static auto* pool = new ThreadPool{4};
++  return *pool;
++}
++
+ } // namespace
+ 
+ namespace mlx::core {
+@@ -50,7 +59,10 @@ void Load::eval_cpu(const std::vector<array>& inputs, array& out) {
+       }
+     }
+   };
+-  auto fut = io::thread_pool().enqueue(std::move(read_task)).share();
++  auto& pool = dynamic_cast<io::ParallelFileReader*>(reader_.get())
++      ? io::thread_pool()
++      : reader_pool();
++  auto fut = pool.enqueue(std::move(read_task)).share();
+   scheduler::enqueue(stream(), [fut = std::move(fut)]() { fut.get(); });
+ }
+ 

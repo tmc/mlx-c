@@ -95,7 +95,8 @@ endif()
 
 # Upstream 0.32.2 regressions (#4431 sdpa, #4453 array assignment, #4420 scan),
 # plus fork fixes: short-read, for ParallelFileReader ignoring short preads,
-# and derived-error, for a GPU eval that depends on a failed lazy load.
+# derived-error, for a GPU eval that depends on a failed lazy load, and
+# reader-pool, for a path load stalled behind blocked custom-reader reads.
 # Each mode is red on the pristine pin and green with the matching fix. The
 # scan modes assert an unrelated canary allocation, because the defect is an
 # out-of-bounds write whose own numerical output is correct.
@@ -108,6 +109,9 @@ if(MLX_BUILD_CPU)
            COMMAND mlxc_test_regressions short-read
                    ${CMAKE_CURRENT_BINARY_DIR}/short_read.safetensors)
   set_tests_properties(mlxc_regression_short-read PROPERTIES TIMEOUT 60)
+  add_test(NAME mlxc_regression_reader-pool
+           COMMAND mlxc_test_regressions reader-pool ${CMAKE_CURRENT_BINARY_DIR})
+  set_tests_properties(mlxc_regression_reader-pool PROPERTIES TIMEOUT 60)
   if(MLX_BUILD_METAL OR MLX_BUILD_CUDA)
     foreach(mode attention scan scan-axis0)
       add_test(NAME mlxc_regression_${mode} COMMAND mlxc_test_regressions ${mode})
