@@ -96,14 +96,15 @@ endif()
 # Upstream 0.32.2 regressions (#4431 sdpa, #4453 array assignment, #4420 scan),
 # plus fork fixes: short-read, for ParallelFileReader ignoring short preads,
 # derived-error, for a GPU eval that depends on a failed lazy load,
-# reader-pool, for a path load stalled behind blocked custom-reader reads, and
-# load-leak, for the CUDA Load staging buffer leaked by a failed read.
+# reader-pool, for a path load stalled behind blocked custom-reader reads,
+# failed-load, for an array read after its lazy load failed, and load-leak,
+# for the CUDA Load staging buffer leaked by a failed read.
 # Each mode is red on the pristine pin and green with the matching fix. The
 # scan modes assert an unrelated canary allocation, because the defect is an
 # out-of-bounds write whose own numerical output is correct.
 if(MLX_BUILD_CPU)
   add_executable(mlxc_test_regressions regressions.cpp)
-  target_link_libraries(mlxc_test_regressions PRIVATE mlx Threads::Threads)
+  target_link_libraries(mlxc_test_regressions PRIVATE mlxc mlx Threads::Threads)
   add_test(NAME mlxc_regression_assignment COMMAND mlxc_test_regressions assignment)
   set_tests_properties(mlxc_regression_assignment PROPERTIES TIMEOUT 60)
   add_test(NAME mlxc_regression_short-read
@@ -113,6 +114,10 @@ if(MLX_BUILD_CPU)
   add_test(NAME mlxc_regression_reader-pool
            COMMAND mlxc_test_regressions reader-pool ${CMAKE_CURRENT_BINARY_DIR})
   set_tests_properties(mlxc_regression_reader-pool PROPERTIES TIMEOUT 60)
+  add_test(NAME mlxc_regression_failed-load
+           COMMAND mlxc_test_regressions failed-load
+                   ${CMAKE_CURRENT_BINARY_DIR}/failed_load.safetensors)
+  set_tests_properties(mlxc_regression_failed-load PROPERTIES TIMEOUT 60)
   if(MLX_BUILD_METAL OR MLX_BUILD_CUDA)
     foreach(mode attention scan scan-axis0)
       add_test(NAME mlxc_regression_${mode} COMMAND mlxc_test_regressions ${mode})

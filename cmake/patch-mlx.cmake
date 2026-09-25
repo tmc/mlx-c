@@ -11,7 +11,7 @@ if(NOT status EQUAL 0 OR NOT revision STREQUAL "1f8e74e3f12f31365464a6867c6579f0
 endif()
 set(patch "${CMAKE_CURRENT_LIST_DIR}/mlx-v0.32.2.patch")
 file(SHA256 "${patch}" patch_hash)
-if(NOT patch_hash STREQUAL "a10fe36ed5343fd56726cdff2526e33eeb2b087421abcc4d0a27117115cfe548")
+if(NOT patch_hash STREQUAL "ae7ec5631d1e7a6493c028c594c6b9fe926c6921a335040286453f73b248fe2d")
   message(FATAL_ERROR "MLX patch checksum mismatch")
 endif()
 # The first eight files match core b76656e61d0a, except that device.cpp also
@@ -21,8 +21,9 @@ endif()
 # and a way to clear it; mlx/io/load.cpp advances the pread offset after a
 # short read; the Metal event files make host waits see errors inherited
 # from a waited event; mlx/backend/common/load.cpp gives custom-reader reads
-# their own pool; mlx/backend/cuda/load.cpp frees its staging buffer when a
-# read fails.
+# their own pool; mlx/transforms.cpp, with array.* and load.cpp, makes an
+# array whose evaluation failed raise the error from then on;
+# mlx/backend/cuda/load.cpp frees its staging buffer when a read fails.
 # The patch header gives per-file provenance.
 set(paths
   mlx/backend/cuda/device.cpp
@@ -50,6 +51,7 @@ set(paths
   mlx/backend/metal/event.cpp
   mlx/backend/metal/event.h
   mlx/backend/common/load.cpp
+  mlx/transforms.cpp
   mlx/backend/cuda/load.cpp)
 set(pristine
   6a5033019724d0c8e5282744f2e7f22427e9e6aa7a824f1b32d85f87c804594b
@@ -77,6 +79,7 @@ set(pristine
   ed0855e27e213586bbe8e659c7e2a2d1566a616b3947c4a6c539615a26fddd11
   451574670929f8ea29f7dbc0ea1242b0684e5b084462c336abc77d97e5a491e2
   f0bbbcb74c089aae0468af02b3aa952a2d446722b4886261edbb0f6e9757abb9
+  2609416aa6a2bd26396ac747892bd98bfd43e986f891928e321b0e7195c0c2a5
   14ec6712ad67bd39484afe75b83a292718ca2fa88559e060a3bc7e5558e7be24)
 set(patched
   037fd9ba2e38936e9334fa542a5612a2b78f1493bbb5e85dfdb1edd7afc9d575
@@ -90,8 +93,8 @@ set(patched
   e1acdaf61472ea2e44196798d34a621fd76fd52a3a76f4c33052727d4f93f8a5
   f52c8da21f2c31f3f77168d326a49815fc29bde4b573883896a8eb3298f11508
   b0fbf0ddf8b883105a04009a0a6437c3812e4b1341571200d68a798cb10dd5b9
-  92d0e3d686eee37ead527e92aa4fc2d9fd893a8c039e7d4f18c404edc2ffbfac
-  543d9096f3ea52870087059db5f793925dfb5e00097638776bc52b01e6189c3b
+  b9b82ced56decfab1bfff5eba6824c8d5af11ecb984edaa8dc915f0ba3c4f3ad
+  69f09261c75d1d860eff49db7ba511d649c12358b8b06a0755244d50f9d4887e
   2becb80ae139a874564624b688b2c77c119968846c0b26d4b1a7de7a01472ca7
   fed4e051fc804217ddbc24f7d4d2568dfcbfc58b0b2eba48cfc24d9527ec4ebb
   7704128ac8a95546585d01d6d2834b16f29cc865b82ea11a89c4674783c9752a
@@ -103,7 +106,8 @@ set(patched
   a0dd0ba9b095f2f6fb33da18abdd238ed18caeb040ba50a6dad24c00907c695f
   9f8457f8a82639eb9c6105cfacde78e3dd349d88bdc1f7762dbbc737f07f0281
   41081425624cd1d2daea7c4d62109ebd9bcff893632ee4238faf9a31c4c0517f
-  4fe85890c0cd911fbcaf0b941883802ba15d163fd703a7616007bfd45b5e290b
+  a1ccf789efbb9b17020ed09294c270fd27e61b6f64c310eff75ee5bb1eaf2575
+  d8924605822eda3036c782fe4d337f5ffa9be9498264c9028bb1fb4d7a237d15
   0683f3960b128afbbb9a22649d350008f145b28cb541b697ccd4776901206599)
 # Only the checked patch may differ from the pinned tracked source.
 execute_process(COMMAND "${GIT_EXECUTABLE}" diff --cached --quiet

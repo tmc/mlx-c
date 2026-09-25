@@ -45,6 +45,17 @@ Provenance, in file order:
       four-thread io pool with path loads, so a slow reader (a Go callback)
       stalled unrelated path loads. Still on upstream main 073d2252c.
       Maintained fork patch, not upstream; re-check on each MLX pin bump
+  mlx/array.{cpp,h}, mlx/backend/common/load.cpp, mlx/transforms.cpp
+      (on top of #4453 and the reader pool above) an array whose evaluation
+      failed records the error in its ArrayDesc, and wait, eval and data
+      raise it from then on. Load::eval_cpu set the output's data before
+      its asynchronous read, so after a failed read a second eval returned
+      success and data returned uninitialized memory. Set by a failed Load
+      read and on the arrays an eval or async_eval was asked to compute
+      when it raises; eval also raises for an input that carries an error.
+      Adds ArrayDesc::error (ABI-affecting, like #4453). Still on upstream
+      main 073d2252c.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
   mlx/backend/cuda/load.cpp, Load::eval_gpu
       free the malloc'd staging buffer when the read throws; it leaked
       once per failed lazy load. Still on upstream main 073d2252c.
@@ -338,10 +349,48 @@ index 9dfe98a5d..9ccd84a66 100644
      return s;
    }
 diff --git a/mlx/array.cpp b/mlx/array.cpp
-index 07d3acd61..e6dbbe785 100644
+index 07d3acd61..ebc1eb490 100644
 --- a/mlx/array.cpp
 +++ b/mlx/array.cpp
-@@ -208,34 +208,33 @@ void array::copy_shared_buffer(const array& other) {
+@@ -143,13 +143,32 @@ bool array::is_available() const {
+ }
+ 
+ void array::wait() {
+-  if (!is_available()) {
+-    if (event().valid()) {
+-      event().wait();
+-      detach_event();
++  try {
++    if (!is_available()) {
++      if (event().valid()) {
++        event().wait();
++        detach_event();
++      }
++      set_status(Status::available);
+     }
+-    set_status(Status::available);
++  } catch (const std::exception& e) {
++    set_error(e.what());
++    throw;
+   }
++  check_error();
++}
++
++void array::set_error(const std::string& msg) const {
++  auto* err = new std::string(msg);
++  const std::string* none = nullptr;
++  if (!array_desc_->error.compare_exchange_strong(
++          none, err, std::memory_order_acq_rel)) {
++    delete err;
++  }
++}
++
++void array::throw_error() const {
++  throw std::runtime_error(*array_desc_->error.load(std::memory_order_acquire));
+ }
+ 
+ void array::eval() {
+@@ -208,34 +227,33 @@ void array::copy_shared_buffer(const array& other) {
    copy_shared_buffer(other, other.strides(), other.flags(), other.data_size());
  }
  
@@ -385,19 +434,33 @@ index 07d3acd61..e6dbbe785 100644
            ss.array_desc_ = nullptr;
          }
          s.array_desc_->siblings.clear();
+@@ -275,6 +293,8 @@ array::ArrayDesc::ArrayDesc(
+ }
+ 
+ array::ArrayDesc::~ArrayDesc() {
++  delete error.load();
++
+   // When an array description is destroyed it will delete a bunch of arrays
+   // that may also destroy their corresponding descriptions and so on and so
+   // forth.
 diff --git a/mlx/array.h b/mlx/array.h
-index 3f45e9cb9..cc29290d2 100644
+index 3f45e9cb9..2565aecda 100644
 --- a/mlx/array.h
 +++ b/mlx/array.h
-@@ -5,6 +5,7 @@
+@@ -2,9 +2,12 @@
+ #pragma once
+ 
+ #include <algorithm>
++#include <atomic>
  #include <cstdint>
  #include <functional>
  #include <memory>
++#include <string>
 +#include <utility>
  #include <vector>
  
  #include "mlx/allocator.h"
-@@ -80,13 +81,22 @@ class MLX_API array {
+@@ -80,13 +83,22 @@ class MLX_API array {
    array& operator=(array&& other) && = delete;
  
    /** Default copy and move constructors otherwise. */
@@ -423,7 +486,34 @@ index 3f45e9cb9..cc29290d2 100644
      }
      return *this;
    }
-@@ -466,10 +476,12 @@ class MLX_API array {
+@@ -371,6 +383,7 @@ class MLX_API array {
+   // given backend to access the GPU pointer.
+   template <typename T>
+   T* data() {
++    check_error();
+     return reinterpret_cast<T*>(
+         (static_cast<char*>(buffer().raw_ptr()) + array_desc_->offset));
+   }
+@@ -415,6 +428,18 @@ class MLX_API array {
+     array_desc_->status = s;
+   }
+ 
++  // Record that the array's evaluation failed with the given message. Its
++  // data is then not valid, and wait, eval and data raise the error. Only the
++  // first error is kept.
++  void set_error(const std::string& msg) const;
++
++  // Raise the error recorded by set_error, if any.
++  void check_error() const {
++    if (array_desc_->error.load(std::memory_order_acquire)) {
++      throw_error();
++    }
++  }
++
+   // Get the array's shared event
+   Event& event() const {
+     return array_desc_->event;
+@@ -466,10 +491,12 @@ class MLX_API array {
    void copy_shared_buffer(const array& other);
  
    void overwrite_descriptor(const array& other) {
@@ -438,7 +528,18 @@ index 3f45e9cb9..cc29290d2 100644
  
   private:
    // Initialize the arrays data
-@@ -532,6 +544,12 @@ class MLX_API array {
+@@ -512,6 +539,10 @@ class MLX_API array {
+     // The arrays position in the output list
+     uint32_t position{0};
+ 
++    // The error of a failed evaluation, or null. Set once, freed with the
++    // ArrayDesc.
++    std::atomic<const std::string*> error{nullptr};
++
+     explicit ArrayDesc(Shape shape, Dtype dtype);
+ 
+     explicit ArrayDesc(
+@@ -532,6 +563,14 @@ class MLX_API array {
    // the primitive which knows how to compute the array's data from its inputs
    // and the list of array's inputs for the primitive.
    std::shared_ptr<ArrayDesc> array_desc_;
@@ -448,6 +549,8 @@ index 3f45e9cb9..cc29290d2 100644
 +   * multi-output primitive.
 +   */
 +  static void release(std::shared_ptr<ArrayDesc> desc);
++
++  [[noreturn]] void throw_error() const;
  };
  
  template <typename T>
@@ -923,7 +1026,7 @@ index d1e43fa02..286224334 100644
  
  } // namespace mlx::core::metal
 diff --git a/mlx/backend/common/load.cpp b/mlx/backend/common/load.cpp
-index b53c92483..448171f53 100644
+index b53c92483..788aa6e5e 100644
 --- a/mlx/backend/common/load.cpp
 +++ b/mlx/backend/common/load.cpp
 @@ -3,6 +3,7 @@
@@ -949,18 +1052,99 @@ index b53c92483..448171f53 100644
  } // namespace
  
  namespace mlx::core {
-@@ -50,7 +59,10 @@ void Load::eval_cpu(const std::vector<array>& inputs, array& out) {
+@@ -50,8 +59,19 @@ void Load::eval_cpu(const std::vector<array>& inputs, array& out) {
        }
      }
    };
 -  auto fut = io::thread_pool().enqueue(std::move(read_task)).share();
+-  scheduler::enqueue(stream(), [fut = std::move(fut)]() { fut.get(); });
 +  auto& pool = dynamic_cast<io::ParallelFileReader*>(reader_.get())
 +      ? io::thread_pool()
 +      : reader_pool();
 +  auto fut = pool.enqueue(std::move(read_task)).share();
-   scheduler::enqueue(stream(), [fut = std::move(fut)]() { fut.get(); });
++  // A failed read leaves out's buffer uninitialized, so mark out failed.
++  scheduler::enqueue(stream(), [fut = std::move(fut), out]() {
++    try {
++      fut.get();
++    } catch (const std::exception& e) {
++      out.set_error(e.what());
++      throw;
++    }
++  });
  }
  
+ } // namespace mlx::core
+diff --git a/mlx/transforms.cpp b/mlx/transforms.cpp
+index 694bca53d..6a3eff932 100644
+--- a/mlx/transforms.cpp
++++ b/mlx/transforms.cpp
+@@ -120,6 +120,7 @@ array eval_impl(std::vector<array> outputs, bool async) {
+       if (idx < a.inputs().size()) {
+         // Add an input, and continue
+         auto& in = a.inputs()[idx++];
++        in.check_error();
+ 
+         if (in.status() == array::Status::unscheduled) {
+           if (async && in.is_tracer()) {
+@@ -347,6 +348,28 @@ array eval_impl(std::vector<array> outputs, bool async) {
+   return synchronizer;
+ }
+ 
++namespace {
++
++// The arrays an eval of outputs computes.
++std::vector<array> unscheduled(const std::vector<array>& outputs) {
++  std::vector<array> v;
++  for (auto& x : outputs) {
++    if (x.status() == array::Status::unscheduled) {
++      v.push_back(x);
++    }
++  }
++  return v;
++}
++
++// Marks the arrays of an eval that failed: their data is not valid.
++void set_error(std::vector<array>& arrays, const std::exception& e) {
++  for (auto& x : arrays) {
++    x.set_error(e.what());
++  }
++}
++
++} // namespace
++
+ void async_eval(std::vector<array> outputs) {
+   if (outputs.empty()) {
+     return;
+@@ -358,7 +381,13 @@ void async_eval(std::vector<array> outputs) {
+     return;
+   }
+ 
+-  eval_impl(std::move(outputs), true);
++  auto computed = unscheduled(outputs);
++  try {
++    eval_impl(std::move(outputs), true);
++  } catch (const std::exception& e) {
++    set_error(computed, e);
++    throw;
++  }
+ }
+ 
+ void eval(std::vector<array> outputs) {
+@@ -375,7 +404,13 @@ void eval(std::vector<array> outputs) {
+     return;
+   }
+ 
+-  eval_impl(std::move(outputs), false).wait();
++  auto computed = unscheduled(outputs);
++  try {
++    eval_impl(std::move(outputs), false).wait();
++  } catch (const std::exception& e) {
++    set_error(computed, e);
++    throw;
++  }
+ }
+ 
+ std::pair<std::vector<array>, std::vector<array>> vjp(
 diff --git a/mlx/backend/cuda/load.cpp b/mlx/backend/cuda/load.cpp
 index 2acc52fd1..87aaf5d9a 100644
 --- a/mlx/backend/cuda/load.cpp
