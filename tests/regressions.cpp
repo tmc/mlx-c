@@ -2,6 +2,7 @@
 #include "mlx/allocator.h"
 #include "mlx/memory.h"
 #include <cmath>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -68,9 +69,35 @@ int scan(bool axis0) {
   return intact && numeric ? 0 : 1;
 }
 
+// A lazily loaded tensor whose file shrinks before eval must fail. Without the
+// fix a short pread is retried at the same offset, filling the rest of the
+// buffer with a repeat of the bytes already read.
+int short_read(const std::string& path) {
+  set_default_device(Device::cpu);
+  std::vector<float> values(4096);
+  for (size_t i=0;i<values.size();++i) values[i]=static_cast<float>(i);
+  save_safetensors(path,{{"x",array(values.data(),{4096})}});
+  auto x=load_safetensors(path).first.at("x");
+  auto full=std::filesystem::file_size(path);
+  std::filesystem::resize_file(path,full-values.size()*sizeof(float)/2);
+  bool failed=false;
+  try { eval(x); } catch(const std::exception& e) {
+    failed=true;
+    std::cout << "short_read error=" << e.what() << std::endl;
+  }
+  if(!failed) {
+    int wrong=0;
+    for (size_t i=0;i<values.size();++i) wrong+=x.data<float>()[i]!=values[i];
+    std::cout << "short_read eval succeeded, wrong=" << wrong << std::endl;
+  }
+  std::filesystem::remove(path);
+  return failed ? 0 : 1;
+}
+
 int main(int argc,char**argv) {
-  if(argc!=2) return 2;
+  if(argc<2) return 2;
   std::string mode=argv[1];
+  if(mode=="short-read" && argc==3) return short_read(argv[2]);
   if(mode=="assignment") return assignment();
   if(mode=="attention") return attention();
   if(mode=="scan") return scan(false);

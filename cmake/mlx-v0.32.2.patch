@@ -27,6 +27,11 @@ Provenance, in file order:
       default_stream returns it on threads with no default of their own
       instead of creating a stream; clear_global_default_streams undoes it.
       Maintained fork patch, not upstream; re-check on each MLX pin bump
+  mlx/io/load.cpp, ParallelFileReader::read
+      advance the pread offset after a short read; the retry reread the
+      same bytes, so a file that shrank after load filled the tensor with
+      repeats instead of failing. Still on upstream main 59d600b5e.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
 
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
 index 472b3d9..babe63e 100644
@@ -778,3 +783,15 @@ index c601c40..bb89701 100644
  TEST_CASE("test export import with metadata") {
    std::string file_path = get_temp_file("model.mlxfn");
  
+diff --git a/mlx/io/load.cpp b/mlx/io/load.cpp
+index a9379c307..da10cb97b 100644
+--- a/mlx/io/load.cpp
++++ b/mlx/io/load.cpp
+@@ -368,6 +368,7 @@ void ParallelFileReader::read(char* data, size_t n, size_t offset) {
+       }
+       buffer += m;
+       size -= m;
++      offset += m;
+     }
+     return true;
+   };

@@ -11,14 +11,15 @@ if(NOT status EQUAL 0 OR NOT revision STREQUAL "1f8e74e3f12f31365464a6867c6579f0
 endif()
 set(patch "${CMAKE_CURRENT_LIST_DIR}/mlx-v0.32.2.patch")
 file(SHA256 "${patch}" patch_hash)
-if(NOT patch_hash STREQUAL "9c5c1e111bb7c817705e70aa5f3d23b9b130751ef6fa8a07dd3a88e2f2981383")
+if(NOT patch_hash STREQUAL "5ecfb69a46beadb8536010ebecc627e2e4ad63996a7603963ce007d91ee57bc3")
   message(FATAL_ERROR "MLX patch checksum mismatch")
 endif()
 # The first eight files match core b76656e61d0a, except that device.cpp also
 # checks the current CUDA context in make_current; mlx/export.cpp resolves
 # imported streams on the importing thread. The rest carry upstream #4431,
 # #4453 and #4420; the last three add an opt-in process-wide default stream
-# and a way to clear it.
+# and a way to clear it; mlx/io/load.cpp advances the pread offset after a
+# short read.
 # The patch header gives per-file provenance.
 set(paths
   mlx/backend/cuda/device.cpp
@@ -40,7 +41,8 @@ set(paths
   tests/gpu_tests.cpp
   mlx/stream.cpp
   mlx/stream.h
-  tests/export_import_tests.cpp)
+  tests/export_import_tests.cpp
+  mlx/io/load.cpp)
 set(pristine
   6a5033019724d0c8e5282744f2e7f22427e9e6aa7a824f1b32d85f87c804594b
   79cb9ec596574b06aaec6e804dde9b4ef661b72522adc712545424ffbf894879
@@ -61,7 +63,8 @@ set(pristine
   05447fe0435e81ffc269284723d51a8cdee8f79916fff38703eccb453d951986
   042c5cb2b06743a507ac42f8888c001ef461cd6498c33d5b80d2bbb79ba05998
   93e08b1178009b07f9a2a4758c03c1bca9ee1886d7ef6b733cc23bd867268d2e
-  3ad2d40d2dbf0e8a15d7eba5885ce67b1e35cbe5cc951d18a5579955e5cea770)
+  3ad2d40d2dbf0e8a15d7eba5885ce67b1e35cbe5cc951d18a5579955e5cea770
+  54f08df8acedd2f925e4bf22db9bd401d5d4e2966d9b67dc649d1e9228d1ad0a)
 set(patched
   037fd9ba2e38936e9334fa542a5612a2b78f1493bbb5e85dfdb1edd7afc9d575
   f3d7b0c4f2beafe8f84d1fa727271c0efc4fc4f3eb1035e498d8dd46a3b16c08
@@ -82,7 +85,8 @@ set(patched
   490d32046744384471f9881aadc8b89c3673c4269ecaf9c0bf546f631dfce9d7
   386b73b7e25ced86c0be9f9af8a9ed00ebcddd9ca760c4ab0bc5a400eb79d271
   e4858dbb70984f81f4e8e6b9468f7bb74baf687b845cb968617662c82de69ff8
-  6389a758ef907a3a5bc3bfea1dbffa7c711305bc95fd1f4cfbd3ca98433b56f7)
+  6389a758ef907a3a5bc3bfea1dbffa7c711305bc95fd1f4cfbd3ca98433b56f7
+  d07b768d44fbb31327020fcf11fd6a9f196b5b9d55edd3803fada198c764ad4f)
 # Only the checked patch may differ from the pinned tracked source.
 execute_process(COMMAND "${GIT_EXECUTABLE}" diff --cached --quiet
   WORKING_DIRECTORY "${MLX_SOURCE_DIR}" RESULT_VARIABLE status)
