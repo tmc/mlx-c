@@ -1,0 +1,8 @@
+commit 809368b76f228aeae814fb072fcbef5d09883c6a
+date 2026-09-25T07:11:52-07:00
+claude-code 2.1.280; model claude-opus-5-5[1m]; tty not a tty
+none; pid 99449; ITERM_SESSION_ID=w5t2p4:7AF08D83-1946-41D0-A5D0-6851DFA9CD71
+session=2e8a918a-a74a-4ca5-aa9c-f8d28962a657
+session_url=https://claude.ai/code/session_015g78kgFPmKtBJ4WitAJk1W
+evidence: red wrong=2048 (build/), green ctest 20/20 fresh configure under gpu-lock (~/tmp/mlxc-f8.ctest.log); pristine apply via cmake -P ok; patch sha 5ecfb69a
+requested-by: A59B7502 (mlx-go io audit F8)
