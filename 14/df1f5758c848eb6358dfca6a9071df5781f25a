@@ -1,0 +1,11 @@
+commit=14df1f5758c848eb6358dfca6a9071df5781f25a
+date=2026-09-24T23:48:12-07:00
+claude-code=2.1.280 (Claude Code)
+model=claude-opus-5-5[1m]
+tty=not a tty
+no-tty
+pid=49277
+ITERM_SESSION_ID=w5t2p4:7AF08D83-1946-41D0-A5D0-6851DFA9CD71
+session=2e8a918a-a74a-4ca5-aa9c-f8d28962a657
+session_url=https://claude.ai/code/session_015g78kgFPmKtBJ4WitAJk1W
+relayed user decision via A59B7502 (GB10 green: 71E397C4 report 20260924-71E397C4-q7-gb10-results.md); Mac ctest 19/19 x3; staged diff sha256 4571e015; no push
