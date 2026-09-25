@@ -59,3 +59,26 @@ if(MLX_BUILD_CPU)
     set_tests_properties(mlxc_import_stream_${mode} PROPERTIES TIMEOUT 60)
   endforeach()
 endif()
+
+# Upstream 0.32.2 regressions (#4431 sdpa, #4453 array assignment, #4420 scan).
+# Each mode is red on the pristine pin and green with the matching fix. The
+# scan modes assert an unrelated canary allocation, because the defect is an
+# out-of-bounds write whose own numerical output is correct.
+if(MLX_BUILD_CPU)
+  add_executable(mlxc_test_regressions regressions.cpp)
+  target_link_libraries(mlxc_test_regressions PRIVATE mlx Threads::Threads)
+  add_test(NAME mlxc_regression_assignment COMMAND mlxc_test_regressions assignment)
+  set_tests_properties(mlxc_regression_assignment PROPERTIES TIMEOUT 60)
+  if(MLX_BUILD_METAL OR MLX_BUILD_CUDA)
+    foreach(mode attention scan scan-axis0)
+      add_test(NAME mlxc_regression_${mode} COMMAND mlxc_test_regressions ${mode})
+    endforeach()
+    # The attention case allocates 2x4x8192x128 K and V twice over.
+    set_tests_properties(mlxc_regression_attention PROPERTIES TIMEOUT 300)
+    set_tests_properties(mlxc_regression_scan mlxc_regression_scan-axis0
+                         PROPERTIES TIMEOUT 60)
+    # One GPU at a time: these are correctness canaries, not throughput tests.
+    set_tests_properties(mlxc_regression_attention mlxc_regression_scan
+                         mlxc_regression_scan-axis0 PROPERTIES RESOURCE_LOCK gpu)
+  endif()
+endif()

@@ -1,3 +1,22 @@
+MLX v0.32.2 carried patches for the mlx-c build.
+
+Provenance, in file order:
+  mlx/backend/cuda/{device,rope,worker}.*, mlx/backend/gpu/eval.h,
+  mlx/event.h, mlx/random.cpp, tests/random_tests.cpp
+      pre-existing carried event/stream patches
+  mlx/export.cpp
+      import_function stream binding; resolve on the importing thread
+      sha256 fd9f95624f70d091f0577a6fb512bab1c03cbe0687c33afb2e345b68ff527eaa
+  mlx/backend/metal/kernels/sdpa_vector.h, python/tests/test_fast_sdpa.py
+      upstream #4431, merged 685dba9ab5991bbd44cb519061bd5b838a5b08bc
+      production hunk exact; python test adapted to the v0.32.2 case table
+  mlx/array.cpp, mlx/array.h, tests/array_tests.cpp, tests/autograd_tests.cpp
+      upstream #4453, merged ae9df56750039cd6d190a364fed69dbdfde3126d
+      inlines ~array and adds a release symbol: ABI-affecting, rebuild all
+      native consumers against these headers
+  mlx/backend/common/utils.cpp, tests/gpu_tests.cpp
+      upstream #4420, merged e64d361731b2f9fac7f800d7b5fb4dd50c290049
+
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
 index 472b3d99f..e7d8f2620 100644
 --- a/mlx/backend/cuda/device.cpp
@@ -232,3 +251,310 @@ index 9dfe98a5d..9ccd84a66 100644
      stream_map.emplace(stream.index, s);
      return s;
    }
+diff --git a/mlx/array.cpp b/mlx/array.cpp
+index 07d3acd61..e6dbbe785 100644
+--- a/mlx/array.cpp
++++ b/mlx/array.cpp
+@@ -208,34 +208,33 @@ void array::copy_shared_buffer(const array& other) {
+   copy_shared_buffer(other, other.strides(), other.flags(), other.data_size());
+ }
+ 
+-array::~array() {
+-  if (array_desc_ == nullptr) {
++void array::release(std::shared_ptr<ArrayDesc> desc) {
++  if (desc == nullptr) {
+     return;
+   }
+ 
+   // Detached/detaching
+-  if (array_desc_->primitive == nullptr) {
++  if (desc->primitive == nullptr) {
+     return;
+   }
+ 
+   // Break circular reference for non-detached arrays with siblings
+-  if (auto n = siblings().size(); n > 0) {
++  if (auto n = desc->siblings.size(); n > 0) {
+     bool do_detach = true;
+     // If all siblings have siblings.size() references except
+-    // the one we are currently destroying (which has siblings.size() + 1)
++    // the one we are currently releasing (which has siblings.size() + 1)
+     // then there are no more external references
+-    do_detach &= (array_desc_.use_count() == (n + 1));
+-    for (auto& s : siblings()) {
++    do_detach &= (desc.use_count() == (n + 1));
++    for (auto& s : desc->siblings) {
+       do_detach &= (s.array_desc_.use_count() == n);
+       if (!do_detach) {
+         break;
+       }
+     }
+     if (do_detach) {
+-      for (auto& s : siblings()) {
++      for (auto& s : desc->siblings) {
+         for (auto& ss : s.siblings()) {
+-          // Set to null here to avoid descending into array destructor
+-          // for siblings
++          // Set to null here to avoid descending into reset() for siblings
+           ss.array_desc_ = nullptr;
+         }
+         s.array_desc_->siblings.clear();
+diff --git a/mlx/array.h b/mlx/array.h
+index 3f45e9cb9..cc29290d2 100644
+--- a/mlx/array.h
++++ b/mlx/array.h
+@@ -5,6 +5,7 @@
+ #include <cstdint>
+ #include <functional>
+ #include <memory>
++#include <utility>
+ #include <vector>
+ 
+ #include "mlx/allocator.h"
+@@ -80,13 +81,22 @@ class MLX_API array {
+   array& operator=(array&& other) && = delete;
+ 
+   /** Default copy and move constructors otherwise. */
+-  array& operator=(array&& other) & = default;
+   array(const array& other) = default;
+   array(array&& other) = default;
+ 
++  /** Assignment goes through release() to break sibling reference cycle. */
+   array& operator=(const array& other) & {
+-    if (this->id() != other.id()) {
+-      this->array_desc_ = other.array_desc_;
++    if (array_desc_ != other.array_desc_) {
++      // Hold the old descriptor while assigning, and then release it. Otherwise
++      // when |this| and |other| are siblings they would be both destroyed.
++      release(std::exchange(array_desc_, other.array_desc_));
++    }
++    return *this;
++  }
++
++  array& operator=(array&& other) & noexcept {
++    if (array_desc_ != other.array_desc_) {
++      release(std::exchange(array_desc_, std::move(other.array_desc_)));
+     }
+     return *this;
+   }
+@@ -466,10 +476,12 @@ class MLX_API array {
+   void copy_shared_buffer(const array& other);
+ 
+   void overwrite_descriptor(const array& other) {
+-    array_desc_ = other.array_desc_;
++    release(std::exchange(array_desc_, other.array_desc_));
+   }
+ 
+-  ~array();
++  ~array() {
++    release(std::move(array_desc_));
++  }
+ 
+  private:
+   // Initialize the arrays data
+@@ -532,6 +544,12 @@ class MLX_API array {
+   // the primitive which knows how to compute the array's data from its inputs
+   // and the list of array's inputs for the primitive.
+   std::shared_ptr<ArrayDesc> array_desc_;
++
++  /**
++   * Lets go of an ArrayDesc, breaking the sibling reference cycle of a
++   * multi-output primitive.
++   */
++  static void release(std::shared_ptr<ArrayDesc> desc);
+ };
+ 
+ template <typename T>
+diff --git a/mlx/backend/common/utils.cpp b/mlx/backend/common/utils.cpp
+index ae169e35e..66764173e 100644
+--- a/mlx/backend/common/utils.cpp
++++ b/mlx/backend/common/utils.cpp
+@@ -1,6 +1,7 @@
+ // Copyright © 2023-2024 Apple Inc.
+ 
+ #include <dlfcn.h>
++#include <numeric>
+ 
+ #include "mlx/backend/common/utils.h"
+ 
+@@ -174,6 +175,22 @@ Dims get_2d_grid_dims_common(
+     const Shape& shape,
+     const Strides& strides,
+     size_t divisor) {
++  // Shortcut when size is a multiple of divisor, for example:
++  // 36: {2 / 2, 4 / 2, 9 / 9} = {1, 2, 1}
++  Shape divided_shape = shape;
++  size_t remaining_divisor = divisor;
++  for (int i = 0; i < shape.size(); ++i) {
++    if (strides[i] == 0) {
++      continue;
++    }
++    auto factor = std::gcd(static_cast<size_t>(shape[i]), remaining_divisor);
++    divided_shape[i] /= factor;
++    remaining_divisor /= factor;
++  }
++  if (remaining_divisor == 1) {
++    return get_2d_grid_dims_common(divided_shape, strides);
++  }
++
+   // Compute the 2d grid dimensions such that the total size of the grid is
+   // divided by divisor.
+   size_t grid_x = 1;
+diff --git a/mlx/backend/metal/kernels/sdpa_vector.h b/mlx/backend/metal/kernels/sdpa_vector.h
+index 3f40dbd7c..8d159a0db 100644
+--- a/mlx/backend/metal/kernels/sdpa_vector.h
++++ b/mlx/backend/metal/kernels/sdpa_vector.h
+@@ -357,6 +357,7 @@ template <typename T, int D, int V, int G, int HPT>
+   const int num_kv_heads = tpg.x;
+   const int num_q_heads = num_kv_heads * G;
+   const int base_head = batch_idx * num_q_heads + kv_head_idx * G;
++  const int kv_batch_head_idx = batch_idx * num_kv_heads + kv_head_idx;
+ 
+   const int chunk = (N + blocks - 1) / blocks;
+   const int kstart = block_idx * chunk;
+@@ -365,9 +366,9 @@ template <typename T, int D, int V, int G, int HPT>
+   const int s0 = kstart + cchunk * sub;
+   const int s1 = min(kend, s0 + sub);
+ 
+-  const device T* kp = keys + kv_head_idx * k_head_stride + s0 * k_seq_stride +
+-      simd_lid * qk_per_thread;
+-  const device T* vp = values + kv_head_idx * v_head_stride +
++  const device T* kp = keys + kv_batch_head_idx * k_head_stride +
++      s0 * k_seq_stride + simd_lid * qk_per_thread;
++  const device T* vp = values + kv_batch_head_idx * v_head_stride +
+       s0 * v_seq_stride + simd_lid * v_per_thread;
+ 
+   U q[HPT][qk_per_thread];
+diff --git a/python/tests/test_fast_sdpa.py b/python/tests/test_fast_sdpa.py
+index b11ce884e..52bb59364 100644
+--- a/python/tests/test_fast_sdpa.py
++++ b/python/tests/test_fast_sdpa.py
+@@ -345,11 +345,16 @@ class TestFastSDPA(mlx_tests.MLXTestCase):
+     def test_sdpa_vector_gqa_long(self):
+         scale = 1.0
+         mx.random.seed(0)
+-        for Nq, Nkv, D in [(32, 4, 128), (64, 8, 64)]:
+-            for L in [8192, 8201]:
+-                q = 5e-1 * mx.random.normal(shape=(1, Nq, 1, D))
+-                k = 5e-1 * mx.random.normal(shape=(1, Nkv, L + 32, D))[:, :, :L]
+-                v = 5e-1 * mx.random.normal(shape=(1, Nkv, L + 32, D))[:, :, :L]
++        for Nq, Nkv, D in [
++            (32, 4, 128),
++            (64, 8, 64),
++            (48, 4, 128),
++            (64, 4, 128),
++        ]:
++            for B, L in [(1, 8192), (1, 8201), (2, 8192)]:
++                q = 5e-1 * mx.random.normal(shape=(B, Nq, 1, D))
++                k = 5e-1 * mx.random.normal(shape=(B, Nkv, L + 32, D))[:, :, :L]
++                v = 5e-1 * mx.random.normal(shape=(B, Nkv, L + 32, D))[:, :, :L]
+                 kr = mx.repeat(k, Nq // Nkv, axis=1)
+                 vr = mx.repeat(v, Nq // Nkv, axis=1)
+                 ref = mlx_primitives_sdpa(q, kr, vr, scale)
+diff --git a/tests/array_tests.cpp b/tests/array_tests.cpp
+index 68a4bed3a..cc0cf5239 100644
+--- a/tests/array_tests.cpp
++++ b/tests/array_tests.cpp
+@@ -690,3 +690,60 @@ TEST_CASE("test siblings circular references without eval") {
+   fun();
+   CHECK(tracker.expired());
+ }
++
++// https://github.com/ml-explore/mlx/pull/4453
++TEST_CASE("test siblings circular references released by assignment") {
++  std::weak_ptr<array::Data> tracker;
++  auto fun = [&]() {
++    array sink({3, 4});
++    array key({1, 2});
++    auto splits = split(key, 2);
++    {
++      // Set fake data as a tracker for ArrayDesc's lifetime.
++      splits[0].set_data(allocator::malloc(0));
++      tracker = splits[0].data_shared_ptr();
++    }
++    // Drop both outputs by assigning over them rather than destroying
++    // them. The siblings hold each other, so unless assignment runs the
++    // same check the destructor does, nothing ever releases them.
++    splits[0] = sink; // copy assignment
++    splits[1] = array({5, 6}); // move assignment
++  };
++  fun();
++  CHECK(tracker.expired());
++}
++
++TEST_CASE("test siblings circular references released by overwrite") {
++  std::weak_ptr<array::Data> tracker;
++  auto fun = [&]() {
++    array key({1, 2});
++    auto splits = split(key, 2);
++    {
++      // Set fake data as a tracker for ArrayDesc's lifetime.
++      splits[0].set_data(allocator::malloc(0));
++      tracker = splits[0].data_shared_ptr();
++    }
++    // Leave one output as the last reference, then replace it in place.
++    // This is the path __setitem__ takes, with no compile involved.
++    array last = splits[0];
++    splits.clear();
++    last.overwrite_descriptor(array({7, 8}));
++  };
++  fun();
++  CHECK(tracker.expired());
++}
++
++TEST_CASE("test assigning a sibling over the last reference keeps the cycle") {
++  array key({1, 2});
++  auto splits = split(key, 2);
++  // Leave one output as the last outside reference to the pair, then assign
++  // its sibling over it. The sibling is reachable only through the array
++  // being replaced, so it has to be held before the old descriptor is
++  // checked: checked first, the pair looks unreferenced, its cycle is broken
++  // and the sibling list the new value lives in is freed before it is read.
++  array last = splits[0];
++  splits.clear();
++  last = last.siblings()[0];
++  REQUIRE_EQ(last.siblings().size(), 1);
++  CHECK(array_equal(last, array({2})).item<bool>());
++}
+diff --git a/tests/autograd_tests.cpp b/tests/autograd_tests.cpp
+index 5a0aca080..e70cb93c3 100644
+--- a/tests/autograd_tests.cpp
++++ b/tests/autograd_tests.cpp
+@@ -749,7 +749,7 @@ TEST_CASE("test op vjps") {
+ TEST_CASE("test gather and take grads") {
+   // Check linear takes
+   auto linear_f = [](array indices) {
+-    auto fun_linear = [&indices](array input) { return take(input, indices); };
++    auto fun_linear = [indices](array input) { return take(input, indices); };
+ 
+     return fun_linear;
+   };
+diff --git a/tests/gpu_tests.cpp b/tests/gpu_tests.cpp
+index 8bef07a61..8f492e52f 100644
+--- a/tests/gpu_tests.cpp
++++ b/tests/gpu_tests.cpp
+@@ -57,6 +57,24 @@ TEST_CASE("test gpu full") {
+   }
+ }
+ 
++TEST_CASE("test gpu strided scan grid") {
++  // Regression for #4419 strided_scan writes out of bounds.
++  std::vector<float> values(72, 1.0f);
++  auto x = array(values.data(), {72});
++  x = transpose(reshape(x, {2, 9, 4}, Device::gpu), {0, 2, 1}, Device::gpu);
++  x = cumsum(x, -1, false, true, Device::gpu);
++
++  auto causal = tril(ones({9, 9}, float32, Device::gpu), 0, Device::gpu);
++  auto relative = subtract(
++      expand_dims(x, -1, Device::gpu),
++      expand_dims(x, -2, Device::gpu),
++      Device::gpu);
++  eval(relative, causal);
++
++  auto expected = tri(9, 9, 0, float32, Device::cpu);
++  CHECK(array_equal(causal, expected, Device::cpu).item<bool>());
++}
++
+ TEST_CASE("test gpu astype") {
+   array x = array({-4, -3, -2, -1, 0, 1, 2, 3});
+   // Check all types work
