@@ -5,3 +5,6 @@ session=2e8a918a-a74a-4ca5-aa9c-f8d28962a657
 session_url=https://claude.ai/code/session_015g78kgFPmKtBJ4WitAJk1W
 evidence: red 3/3 bad=7 c_bad=3, 4096/4096 wrong (~/tmp/mlxc-f1.red{1,2,3}.log); green 500/500 (build/, loops of 200 and 300); fresh ctest 23/23 under gpu-lock (~/tmp/mlxc-f1.ctest.log); pristine apply ok (~/tmp/mlxc-f1.pristine.log); run script ~/tmp/mlxc-f1.run.sh; patch sha 0455b07f, 26 files
 CUDA not built (spark-31db reachable but GPU at 96% in use by a peer)
+
+rebased by main session onto 0bda6fb2 (CUDA leak fix) as c8dbb6b677bff54af61ebecd0993a9caa981b506, 2026-09-25T14:07:50-07:00; conflicted patch/hash/test files rebuilt from both sides; patch sha ae7ec563, 27 files
+gate: mac fresh ctest 23/23 (~/tmp/mlxc-f1r.ctest.log), pristine apply ok (~/tmp/mlxc-f1r.pristine.log); dgx CUDA fresh build ctest 23/23 (dgx ~/tmp/f1r-7AF08D83/gate-ctest.log)
