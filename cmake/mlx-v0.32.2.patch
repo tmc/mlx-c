@@ -32,6 +32,14 @@ Provenance, in file order:
       same bytes, so a file that shrank after load filled the tensor with
       repeats instead of failing. Still on upstream main 59d600b5e.
       Maintained fork patch, not upstream; re-check on each MLX pin bump
+  mlx/backend/metal/{device.cpp,event.cpp,event.h}
+      host waits on a Metal event return once the command buffer's
+      completion handler has run, not when the GPU signals it, because the
+      handler attaches the error inherited from a waited event after the
+      signal. An eval that depended on a failed CPU task (a lazy load whose
+      read threw) returned without an error about a quarter of the time.
+      Still on upstream main 073d2252c.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
 
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
 index 472b3d9..babe63e 100644
@@ -795,3 +803,113 @@ index a9379c307..da10cb97b 100644
      }
      return true;
    };
+diff --git a/mlx/backend/metal/device.cpp b/mlx/backend/metal/device.cpp
+index 2f25f894e..306d0c85b 100644
+--- a/mlx/backend/metal/device.cpp
++++ b/mlx/backend/metal/device.cpp
+@@ -548,10 +548,13 @@ void CommandEncoder::commit(std::function<void()> completion) {
+           }
+         }
+         // Metal won't signal the events for us on error, manually signal them
+-        // to avoid infinite waiting.
+-        if (cbuf->status() == MTL::CommandBufferStatusError) {
+-          for (auto& [event, value] : signal_events) {
++        // to avoid infinite waiting. Either way the host waits for this
++        // handler, which has now attached any error.
++        for (auto& [event, value] : signal_events) {
++          if (cbuf->status() == MTL::CommandBufferStatusError) {
+             event.cast<EventImpl>().signal(value);
++          } else {
++            event.cast<EventImpl>().settle(value);
+           }
+         }
+       });
+diff --git a/mlx/backend/metal/event.cpp b/mlx/backend/metal/event.cpp
+index 38a387c9c..a921ad6ab 100644
+--- a/mlx/backend/metal/event.cpp
++++ b/mlx/backend/metal/event.cpp
+@@ -26,11 +26,26 @@ EventImpl::~EventImpl() {
+ }
+ 
+ void EventImpl::wait(uint64_t value) {
+-  mtl_event_->waitUntilSignaledValue(value, -1); // never times out
++  if (is_settled(value)) {
++    return;
++  }
++  std::unique_lock lk(mtx_);
++  cv_.wait(lk, [this, value] { return is_settled(value); });
+ }
+ 
+ void EventImpl::signal(uint64_t value) {
+   mtl_event_->setSignaledValue(value);
++  settle(value);
++}
++
++void EventImpl::settle(uint64_t value) {
++  {
++    std::lock_guard lk(mtx_);
++    if (settled_.load(std::memory_order_relaxed) < value) {
++      settled_.store(value, std::memory_order_release);
++    }
++  }
++  cv_.notify_all();
+ }
+ 
+ } // namespace metal
+@@ -72,8 +87,7 @@ void Event::signal(Stream stream) {
+ }
+ 
+ bool Event::is_signaled() const {
+-  auto* mtl_event = cast<metal::EventImpl>().mtl_event();
+-  return mtl_event->signaledValue() >= value();
++  return cast<metal::EventImpl>().is_settled(value());
+ }
+ 
+ std::atomic<Error*>& Event::error() {
+diff --git a/mlx/backend/metal/event.h b/mlx/backend/metal/event.h
+index d1e43fa02..286224334 100644
+--- a/mlx/backend/metal/event.h
++++ b/mlx/backend/metal/event.h
+@@ -1,5 +1,8 @@
+ // Copyright © 2026 Apple Inc.
+ 
++#include <condition_variable>
++#include <mutex>
++
+ #include "mlx/backend/metal/device.h"
+ #include "mlx/event.h"
+ 
+@@ -10,9 +13,22 @@ class EventImpl {
+   EventImpl(Device& d);
+   ~EventImpl();
+ 
++  // Wait on the host until |value| is settled.
+   void wait(uint64_t value);
++
++  // Signal |value| from the host and settle it.
+   void signal(uint64_t value);
+ 
++  // Mark |value| settled: any error that comes with it is already attached.
++  // A command buffer signals its events on the GPU before its completion
++  // handler attaches the error of a waited event, so the host waits for the
++  // handler to settle the value instead of for the GPU signal.
++  void settle(uint64_t value);
++
++  bool is_settled(uint64_t value) const {
++    return settled_.load(std::memory_order_acquire) >= value;
++  }
++
+   auto& error() {
+     return error_;
+   }
+@@ -26,6 +42,10 @@ class EventImpl {
+   std::atomic<Error*> error_;
+ 
+   NS::SharedPtr<MTL::SharedEvent> mtl_event_;
++
++  std::mutex mtx_;
++  std::condition_variable cv_;
++  std::atomic<uint64_t> settled_{0};
+ };
+ 
+ } // namespace mlx::core::metal

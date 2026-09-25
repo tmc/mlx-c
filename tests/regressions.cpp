@@ -2,7 +2,9 @@
 #include "mlx/allocator.h"
 #include "mlx/memory.h"
 #include <cmath>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -94,10 +96,59 @@ int short_read(const std::string& path) {
   return failed ? 0 : 1;
 }
 
+// An in-memory reader whose offset reads fail, as a Go reader that returns an
+// error does. The header is read through the cursor and succeeds.
+struct FailingReader : io::Reader {
+  std::string bytes;
+  size_t pos=0;
+  explicit FailingReader(std::string b) : bytes(std::move(b)) {}
+  bool is_open() const override { return true; }
+  bool good() const override { return pos<=bytes.size(); }
+  size_t tell() override { return pos; }
+  void seek(int64_t off,std::ios_base::seekdir way) override {
+    pos = way==std::ios_base::beg ? off : way==std::ios_base::end ? bytes.size()+off : pos+off;
+  }
+  void read(char* data,size_t n) override {
+    if(pos+n>bytes.size()) throw std::runtime_error("failing reader: eof");
+    std::memcpy(data,bytes.data()+pos,n);
+    pos+=n;
+  }
+  void read(char*,size_t,size_t) override {
+    throw std::runtime_error("failing reader: read failed");
+  }
+  std::string label() const override { return "failing reader"; }
+};
+
+// An array computed on the GPU from a lazy load whose read fails must fail to
+// evaluate. The Metal command buffer that waits on the failed CPU stream
+// signals the eval's event on the GPU, before its completion handler attaches
+// the error to that event, so a host waiter that wakes in between returns
+// without an error.
+int derived_error(const std::string& path) {
+  std::vector<float> values(256,1.f);
+  save_safetensors(path,{{"x",array(values.data(),{256})}});
+  std::string bytes;
+  {
+    std::ifstream in(path,std::ios::binary);
+    bytes.assign(std::istreambuf_iterator<char>(in),{});
+  }
+  std::filesystem::remove(path);
+  auto gpu=default_stream(Device::gpu);
+  int runs=500, silent=0;
+  for(int i=0;i<runs;++i) {
+    auto x=load_safetensors(std::make_shared<FailingReader>(bytes),Device::cpu).first.at("x");
+    auto y=add(x,array(1.f),gpu);
+    try { eval(y); ++silent; } catch(const std::exception&) {}
+  }
+  std::cout << "derived_error silent=" << silent << "/" << runs << std::endl;
+  return silent==0 ? 0 : 1;
+}
+
 int main(int argc,char**argv) {
   if(argc<2) return 2;
   std::string mode=argv[1];
   if(mode=="short-read" && argc==3) return short_read(argv[2]);
+  if(mode=="derived-error" && argc==3) return derived_error(argv[2]);
   if(mode=="assignment") return assignment();
   if(mode=="attention") return attention();
   if(mode=="scan") return scan(false);
