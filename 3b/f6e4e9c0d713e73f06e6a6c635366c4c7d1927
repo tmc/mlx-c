@@ -1,0 +1,9 @@
+commit 3bf6e4e9c0d713e73f06e6a6c635366c4c7d1927
+date 2026-09-25T07:59:51-07:00
+claude-code 2.1.280; model claude-opus-5-5[1m]; tty not a tty
+not a tty; pid 56842; ITERM_SESSION_ID=w5t2p4:7AF08D83-1946-41D0-A5D0-6851DFA9CD71
+session=2e8a918a-a74a-4ca5-aa9c-f8d28962a657
+session_url=https://claude.ai/code/session_015g78kgFPmKtBJ4WitAJk1W
+evidence: red derived-error silent 124,125,109/500 (~/tmp/mlxc-coreio/red-derived.txt); green 0/500 x3 (~/tmp/mlxc-coreio/green-derived.txt); CUDA 0/500 x3 before fix 2 (dgx:~/tmp/coreio-mlxc-7AF08D83/red.txt); ctest 21/21 under gpu-lock (~/tmp/mlxc-coreio/c1-ctest2.log); an earlier run timed out mlxc_stream_global (CPU) at 15s under load ~100 (~/tmp/mlxc-coreio/c1-ctest.log), not reproduced in 60 serial + 200 parallel direct runs; pristine apply via cmake -P ok; patch sha e396c334
+latency ABBA under load 76-90: tiny eval median round ratio fix/base 1.05, 32-op chain 1.006, spread 0.8-2.1 (~/tmp/mlxc-coreio/abba-{tiny,chain}.txt); quiet-machine number still open
+requested-by: A59B7502 (mlx-go io audit, derived-array race)
