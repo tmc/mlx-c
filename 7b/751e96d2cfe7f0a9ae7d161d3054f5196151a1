@@ -1,0 +1,7 @@
+commit 7b751e96d2cfe7f0a9ae7d161d3054f5196151a1
+date 2026-09-25T13:20:33-07:00
+claude-code 2.1.280; model claude-opus-5-5[1m]; tty not a tty; pid 56842; ITERM_SESSION_ID=w5t2p4:7AF08D83-1946-41D0-A5D0-6851DFA9CD71
+session=2e8a918a-a74a-4ca5-aa9c-f8d28962a657
+session_url=https://claude.ai/code/session_015g78kgFPmKtBJ4WitAJk1W
+evidence: red 3/3 bad=7 c_bad=3, 4096/4096 wrong (~/tmp/mlxc-f1.red{1,2,3}.log); green 500/500 (build/, loops of 200 and 300); fresh ctest 23/23 under gpu-lock (~/tmp/mlxc-f1.ctest.log); pristine apply ok (~/tmp/mlxc-f1.pristine.log); run script ~/tmp/mlxc-f1.run.sh; patch sha 0455b07f, 26 files
+CUDA not built (spark-31db reachable but GPU at 96% in use by a peer)
