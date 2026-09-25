@@ -211,3 +211,24 @@ index 9dfe98a5d..9ccd84a66 100644
 +  visit(out);
 +  CHECK(expanded > 0);
 +}
+--- a/mlx/export.cpp
++++ b/mlx/export.cpp
+@@ -496,15 +496,9 @@
+     if (auto it = stream_map.find(stream.index); it != stream_map.end()) {
+       return it->second;
+     }
+-    // Try to find an existing stream on the same device
+-    for (auto& s : get_streams()) {
+-      if (s.device == stream.device) {
+-        stream_map.emplace(stream.index, s);
+-        return s;
+-      }
+-    }
+-    // No stream on that device, make a new one
+-    Stream s = new_stream(stream.device);
++    // Resolve on the importing thread; the registry also contains other
++    // threads' streams, whose backend encoders are not accessible here.
++    Stream s = default_stream(stream.device);
+     stream_map.emplace(stream.index, s);
+     return s;
+   }

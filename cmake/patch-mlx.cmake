@@ -11,10 +11,11 @@ if(NOT status EQUAL 0 OR NOT revision STREQUAL "1f8e74e3f12f31365464a6867c6579f0
 endif()
 set(patch "${CMAKE_CURRENT_LIST_DIR}/mlx-v0.32.2.patch")
 file(SHA256 "${patch}" patch_hash)
-if(NOT patch_hash STREQUAL "45d96fd272cc8f1918f497c0e1df4ca0570fec0c89e14e4874c5d0c1bbced95f")
+if(NOT patch_hash STREQUAL "93e87730c22620e5327abe6517c6824e88f0647eba7822375a2dd442dbcf5b49")
   message(FATAL_ERROR "MLX patch checksum mismatch")
 endif()
-# Resulting tracked source matches core b76656e61d0aed0cd9fb74ae7554ad08429de97e.
+# The first eight files match core b76656e61d0a; mlx/export.cpp resolves
+# imported streams on the importing thread.
 set(paths
   mlx/backend/cuda/device.cpp
   mlx/backend/cuda/rope.cu
@@ -23,7 +24,8 @@ set(paths
   mlx/backend/gpu/eval.h
   mlx/event.h
   mlx/random.cpp
-  tests/random_tests.cpp)
+  tests/random_tests.cpp
+  mlx/export.cpp)
 set(pristine
   6a5033019724d0c8e5282744f2e7f22427e9e6aa7a824f1b32d85f87c804594b
   79cb9ec596574b06aaec6e804dde9b4ef661b72522adc712545424ffbf894879
@@ -32,7 +34,8 @@ set(pristine
   8c18ac14ca85348cda4ccf6fb87badf30fbc5723b2f35254145871c2444bdbe3
   56d49e3c5d71ffa94e484ef55762b25e627b4a9114ad1c138534b7a83826c8fb
   d4ef694bedccbc9735cfe12918f676378cf351ce87a056c12821982c0a61cde6
-  3fc4e7fb0481fff61dbe6b3776b152ef018e142db89bdc7b9bedbcc9c2374e9d)
+  3fc4e7fb0481fff61dbe6b3776b152ef018e142db89bdc7b9bedbcc9c2374e9d
+  7ccca449d5b98149da4a3be7d0f4305c7db7145e521cf81d31f91228620d8b69)
 set(patched
   35705bc794d7cf49d1351771ee80ca7fa8c5083ca6b931eaf691616adf54d28e
   f3d7b0c4f2beafe8f84d1fa727271c0efc4fc4f3eb1035e498d8dd46a3b16c08
@@ -41,7 +44,8 @@ set(patched
   681239fe618b4183107641a7a414c936b4fb95ccc508992f53982d978ea44d76
   cede132b4ec128eaab040f0ba577155bb032fea2f94b430bc5ac3d5861cfff5d
   44923f1f6f9c01f7a99db6952897618080a8a26825a7eff45ae2ef7dc0f8a44e
-  cedfb7fb2854668228be2d561a231fe9dcd6445d825aacd762945300de6a2931)
+  cedfb7fb2854668228be2d561a231fe9dcd6445d825aacd762945300de6a2931
+  e1acdaf61472ea2e44196798d34a621fd76fd52a3a76f4c33052727d4f93f8a5)
 # Only the checked patch may differ from the pinned tracked source.
 execute_process(COMMAND "${GIT_EXECUTABLE}" diff --cached --quiet
   WORKING_DIRECTORY "${MLX_SOURCE_DIR}" RESULT_VARIABLE status)
@@ -73,9 +77,16 @@ execute_process(COMMAND "${GIT_EXECUTABLE}" diff --summary HEAD
 if(NOT status EQUAL 0 OR NOT metadata STREQUAL "")
   message(FATAL_ERROR "MLX patch source has file mode or type changes")
 endif()
+list(LENGTH paths path_count)
+list(LENGTH pristine pristine_count)
+list(LENGTH patched patched_count)
+if(NOT path_count EQUAL pristine_count OR NOT path_count EQUAL patched_count)
+  message(FATAL_ERROR "MLX patch checksum lists differ in length")
+endif()
+math(EXPR last_path "${path_count} - 1")
 set(all_pristine TRUE)
 set(all_patched TRUE)
-foreach(i RANGE 0 7)
+foreach(i RANGE 0 ${last_path})
   list(GET paths ${i} path)
   list(GET pristine ${i} before)
   list(GET patched ${i} after)
@@ -104,7 +115,7 @@ execute_process(COMMAND "${GIT_EXECUTABLE}" apply "${patch}"
 if(NOT status EQUAL 0)
   message(FATAL_ERROR "MLX patch application failed")
 endif()
-foreach(i RANGE 0 7)
+foreach(i RANGE 0 ${last_path})
   list(GET paths ${i} path)
   list(GET patched ${i} expected)
   file(SHA256 "${MLX_SOURCE_DIR}/${path}" actual)
