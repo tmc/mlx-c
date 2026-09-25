@@ -1,0 +1,8 @@
+commit bc82060c345e81d30cefa9fe573e765b0e52e2bf
+date 2026-09-25T12:40:37-07:00
+claude-code 2.1.280; model claude-opus-5-5[1m]; tty not a tty
+none; pid 37390; ITERM_SESSION_ID=w5t2p4:7AF08D83-1946-41D0-A5D0-6851DFA9CD71
+session=2e8a918a-a74a-4ca5-aa9c-f8d28962a657
+session_url=https://claude.ai/code/session_015g78kgFPmKtBJ4WitAJk1W
+evidence: red path_eval_ms=5898-5907 3/3, green 0 ms 5/5 (build/); fresh ctest 22/22 under gpu-lock (~/tmp/mlxc-coreio-p15.ctest.log); pristine apply ok (~/tmp/mlxc-coreio-p15.pristine.log); patch sha f8b182b0
+probe: ~/tmp/mlxc-coreio/p15b.cpp (A59B7502 io-fixes P15)
