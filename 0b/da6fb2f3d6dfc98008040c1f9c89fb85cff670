@@ -1,0 +1,8 @@
+commit 0bda6fb2f3d6dfc98008040c1f9c89fb85cff670
+date 2026-09-25T13:29:48-07:00
+claude-code 2.1.280; model claude-opus-5-5[1m]; tty not a tty
+none; pid 85018; ITERM_SESSION_ID=w5t2p4:7AF08D83-1946-41D0-A5D0-6851DFA9CD71
+session=2e8a918a-a74a-4ca5-aa9c-f8d28962a657
+session_url=https://claude.ai/code/session_015g78kgFPmKtBJ4WitAJk1W
+evidence: dgx ~/tmp/coreio-leak-7AF08D83/{red,green}.log (128.004 MiB x3 -> 0.004 MiB x3); dgx gate-ctest.log 22/22 CUDA; mac ~/tmp/mlxc-coreio-leak.ctest.log (2 cold-start timeouts, load 53) and ctest2.log 22/22; pristine ~/tmp/mlxc-coreio-leak.pristine.log; patch sha a10fe36e
+drafted by subagent core-io-fixes (~/tmp/mlxc-coreio/leak-wip.patch), finished and verified by main session
