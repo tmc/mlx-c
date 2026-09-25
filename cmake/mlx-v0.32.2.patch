@@ -16,6 +16,11 @@ Provenance, in file order:
       native consumers against these headers
   mlx/backend/common/utils.cpp, tests/gpu_tests.cpp
       upstream #4420, merged e64d361731b2f9fac7f800d7b5fb4dd50c290049
+  mlx/stream.cpp, mlx/stream.h, tests/export_import_tests.cpp
+      opt-in process-wide default stream (set_global_default_stream):
+      default_stream returns it on threads with no default of their own
+      instead of creating a stream; clear_global_default_streams undoes it.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
 
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
 index 472b3d99f..e7d8f2620 100644
@@ -558,3 +563,159 @@ index 8bef07a61..8f492e52f 100644
  TEST_CASE("test gpu astype") {
    array x = array({-4, -3, -2, -1, 0, 1, 2, 3});
    // Check all types work
+diff --git a/mlx/stream.cpp b/mlx/stream.cpp
+index b78ee67..ab66ccb 100644
+--- a/mlx/stream.cpp
++++ b/mlx/stream.cpp
+@@ -6,7 +6,9 @@
+ #include "mlx/backend/gpu/device_info.h"
+ #include "mlx/backend/gpu/eval.h"
+ 
++#include <algorithm>
+ #include <array>
++#include <atomic>
+ #include <map>
+ #include <optional>
+ #include <shared_mutex>
+@@ -26,6 +28,33 @@ auto& default_stream_storage(Device d) {
+   return default_streams[static_cast<size_t>(d.type)].at(d.index);
+ }
+ 
++// Process-wide fallback defaults, consulted only by threads without their
++// own default for a device.
++struct GlobalDefaults {
++  std::array<std::vector<std::optional<Stream>>, 2> streams;
++  std::shared_mutex mtx;
++  std::atomic<bool> set{false};
++
++  GlobalDefaults() {
++    streams[static_cast<size_t>(Device::cpu)].resize(cpu::device_count());
++    streams[static_cast<size_t>(Device::gpu)].resize(gpu::device_count());
++  }
++};
++
++GlobalDefaults& global_defaults() {
++  static GlobalDefaults g;
++  return g;
++}
++
++std::optional<Stream> global_default_stream(Device d) {
++  auto& g = global_defaults();
++  if (!g.set.load(std::memory_order_acquire)) {
++    return std::nullopt;
++  }
++  std::shared_lock lock(g.mtx);
++  return g.streams[static_cast<size_t>(d.type)].at(d.index);
++}
++
+ auto& all_streams() {
+   static std::tuple<std::vector<Stream>, std::shared_mutex> streams_and_mtx;
+   return streams_and_mtx;
+@@ -45,6 +74,9 @@ Stream default_stream(Device d) {
+   }
+   auto& s = default_stream_storage(d);
+   if (!s.has_value()) {
++    if (auto g = global_default_stream(d)) {
++      return *g;
++    }
+     s = new_stream(d.type);
+   }
+   return s.value();
+@@ -58,6 +90,26 @@ void set_default_stream(Stream s) {
+   default_stream_storage(s.device) = s;
+ }
+ 
++void set_global_default_stream(Stream s) {
++  if (!gpu::is_available() && s.device == Device::gpu) {
++    throw std::invalid_argument(
++        "[set_global_default_stream] Cannot set gpu stream without gpu backend.");
++  }
++  auto& g = global_defaults();
++  std::unique_lock lock(g.mtx);
++  g.streams[static_cast<size_t>(s.device.type)].at(s.device.index) = s;
++  g.set.store(true, std::memory_order_release);
++}
++
++void clear_global_default_streams() {
++  auto& g = global_defaults();
++  std::unique_lock lock(g.mtx);
++  for (auto& slots : g.streams) {
++    std::fill(slots.begin(), slots.end(), std::nullopt);
++  }
++  g.set.store(false, std::memory_order_release);
++}
++
+ std::vector<Stream> get_streams() {
+   auto& [streams, mtx] = all_streams();
+   std::shared_lock lock(mtx);
+diff --git a/mlx/stream.h b/mlx/stream.h
+index 3099ee2..2ed44eb 100644
+--- a/mlx/stream.h
++++ b/mlx/stream.h
+@@ -32,6 +32,24 @@ MLX_API Stream default_stream(Device d);
+ /** Make the stream the default for its device on current thread. */
+ MLX_API void set_default_stream(Stream s);
+ 
++/**
++ * Make the stream the process-wide fallback default for its device.
++ *
++ * default_stream returns the fallback on any thread that has not set its own
++ * default for that device, instead of creating a new stream for the thread.
++ * The stream must be usable from any thread, i.e. made by
++ * new_thread_unsafe_stream. Off unless called.
++ */
++MLX_API void set_global_default_stream(Stream s);
++
++/**
++ * Remove every process-wide fallback default set by
++ * set_global_default_stream. Threads that have not set or created a default
++ * of their own go back to creating one on first use. Defaults a thread
++ * already holds are not changed.
++ */
++MLX_API void clear_global_default_streams();
++
+ /** Make a new stream on the given device. */
+ MLX_API Stream new_stream(Device d);
+ 
+diff --git a/tests/export_import_tests.cpp b/tests/export_import_tests.cpp
+index c601c40..bb89701 100644
+--- a/tests/export_import_tests.cpp
++++ b/tests/export_import_tests.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include <filesystem>
+ #include <stdexcept>
++#include <thread>
+ #include <vector>
+ 
+ #include "doctest/doctest.h"
+@@ -162,6 +163,29 @@ TEST_CASE("test export function on different stream") {
+   eval(import_function(file_path)({array({0, 1, 2})}));
+ }
+ 
++TEST_CASE("test import function on another thread") {
++  std::string file_path = get_temp_file("model.mlxfn");
++
++  auto fun = [](const std::vector<array>& args) -> std::vector<array> {
++    return {add(args[0], args[0])};
++  };
++  export_function(file_path, fun, {array(3.0f)});
++
++  // The importing thread must bind the function to a stream it can use,
++  // not to a stream of the exporting thread.
++  bool ok = false;
++  std::thread t([&] {
++    try {
++      auto out = import_function(file_path)({array(4.0f)});
++      eval(out);
++      ok = out[0].item<float>() == 8.0f;
++    } catch (const std::exception&) {
++    }
++  });
++  t.join();
++  CHECK(ok);
++}
++
+ TEST_CASE("test export import with metadata") {
+   std::string file_path = get_temp_file("model.mlxfn");
+ 

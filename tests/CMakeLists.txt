@@ -60,6 +60,26 @@ if(MLX_BUILD_CPU)
   endforeach()
 endif()
 
+# Calls without a stream on fresh threads must not create one.
+if(MLX_BUILD_CPU)
+  add_executable(mlxc_test_fresh_thread fresh_thread.cpp)
+  target_link_libraries(mlxc_test_fresh_thread PRIVATE mlxc mlx Threads::Threads)
+  set(fresh_thread_device cpu)
+  if(MLX_BUILD_METAL OR MLX_BUILD_CUDA)
+    set(fresh_thread_device gpu)
+    add_test(NAME mlxc_fresh_thread_never_set
+             COMMAND mlxc_test_fresh_thread never-set)
+    set_tests_properties(mlxc_fresh_thread_never_set PROPERTIES TIMEOUT 60)
+  endif()
+  add_test(NAME mlxc_fresh_thread_tripwire
+           COMMAND mlxc_test_fresh_thread tripwire
+                   ${CMAKE_CURRENT_BINARY_DIR}/fresh_thread.mlxfn
+                   ${fresh_thread_device})
+  set_tests_properties(mlxc_fresh_thread_tripwire PROPERTIES TIMEOUT 60)
+  add_test(NAME mlxc_fresh_thread_clear COMMAND mlxc_test_fresh_thread clear)
+  set_tests_properties(mlxc_fresh_thread_clear PROPERTIES TIMEOUT 60)
+endif()
+
 # Upstream 0.32.2 regressions (#4431 sdpa, #4453 array assignment, #4420 scan).
 # Each mode is red on the pristine pin and green with the matching fix. The
 # scan modes assert an unrelated canary allocation, because the defect is an

@@ -1,7 +1,6 @@
 #include "mlx/c/export.h"
 #include "mlx/c/error.h"
 #include "mlx/c/private/mlx.h"
-#include "mlx/c/private/import_stream.h"
 #include "mlx/export.h"
 
 extern "C" int mlx_export_function(
@@ -91,7 +90,6 @@ extern "C" int mlx_function_exporter_apply_kwargs(
 }
 extern "C" mlx_imported_function mlx_imported_function_new(const char* file) {
   try {
-    mlx_import_stream_guard_ streams;
     return mlx_imported_function_new_(
         mlx::core::import_function(std::string(file)));
   } catch (std::exception& e) {

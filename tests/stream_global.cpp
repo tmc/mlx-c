@@ -25,9 +25,11 @@ int main(int argc, char** argv) {
   std::promise<void> release;
   auto done = release.get_future();
   std::thread worker([&] {
+    // A thread without a default of its own falls back to the global one
+    // instead of creating a stream.
     auto other = local_default();
     CHECK(!mlx_stream_equal(other, local));
-    CHECK(!mlx_stream_equal(other, portable));
+    CHECK(mlx_stream_equal(other, portable));
     mlx_stream result = mlx_stream_new();
     CHECK(mlx_get_default_stream_global(&result, dev) == 0);
     CHECK(mlx_stream_equal(result, portable));

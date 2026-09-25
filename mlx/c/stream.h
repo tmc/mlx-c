@@ -161,6 +161,13 @@ mlx_stream mlx_default_gpu_stream_new(void);
  */
 int mlx_get_default_stream_global(mlx_stream* stream, mlx_device dev);
 int mlx_set_default_stream_global(mlx_stream stream);
+/**
+ * Remove the process-global defaults set by mlx_set_default_stream_global.
+ * Threads without a default of their own go back to creating one. A default
+ * a thread already holds, including the one the setter gave its caller, is
+ * not changed.
+ */
+int mlx_clear_default_stream_global(void);
 int mlx_synchronize_default_global(void);
 mlx_stream mlx_default_cpu_stream_new_global(void);
 mlx_stream mlx_default_gpu_stream_new_global(void);

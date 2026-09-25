@@ -3,15 +3,42 @@
 #include <cstring>
 #include <map>
 #include <mutex>
+#include <set>
 #include <utility>
 
 #include "mlx/c/device.h"
 #include "mlx/c/error.h"
 #include "mlx/c/private/mlx.h"
-#include "mlx/c/private/import_stream.h"
 #include "mlx/c/stream.h"
 
 namespace {
+
+// Indices of the streams this wrapper created as thread-unsafe (portable).
+// MLX core numbers streams from one process-wide registry that is never
+// cleared, so an index names one stream for the life of the process.
+// Entries outlive mlx_stream_free: that frees a handle, not the stream, and
+// other handles may still name it. This relies on mlx-c only ever copying
+// Streams that core created, never building one from a caller's index.
+std::mutex& portable_streams_mutex() {
+  static std::mutex mtx;
+  return mtx;
+}
+
+std::set<int>& portable_streams() {
+  static std::set<int> indices;
+  return indices;
+}
+
+mlx::core::Stream record_portable(mlx::core::Stream s) {
+  std::lock_guard<std::mutex> lock(portable_streams_mutex());
+  portable_streams().insert(s.index);
+  return s;
+}
+
+bool is_portable(mlx::core::Stream s) {
+  std::lock_guard<std::mutex> lock(portable_streams_mutex());
+  return portable_streams().count(s.index) > 0;
+}
 
 // Global extension defaults use portable streams; callers serialize submission.
 mlx::core::Stream default_stream_for(mlx::core::Device d) {
@@ -21,7 +48,10 @@ mlx::core::Stream default_stream_for(mlx::core::Device d) {
   auto key = std::make_pair(static_cast<int>(d.type), d.index);
   auto it = defaults.find(key);
   if (it == defaults.end()) {
-    it = defaults.emplace(key, mlx::core::new_thread_unsafe_stream(d)).first;
+    it = defaults
+             .emplace(
+                 key, record_portable(mlx::core::new_thread_unsafe_stream(d)))
+             .first;
   }
   return it->second;
 }
@@ -57,35 +87,6 @@ mlx::core::Stream effective_default_stream(mlx::core::Device d) {
 
 } // namespace
 
-mlx_import_stream_guard_::mlx_import_stream_guard_() {
-  using namespace mlx::core;
-  // Constants are loaded on CPU even when all serialized operations use GPU.
-  // device_count, unlike a backend-compiled predicate, checks visible devices.
-  for (auto type : {Device::cpu, Device::gpu}) {
-    for (int i = 0, n = device_count(type); i < n; ++i) {
-      defaults_.push_back(default_stream(Device(type, i)));
-    }
-  }
-  try {
-    for (auto s : defaults_) {
-      effective_default_stream(s.device);
-    }
-  } catch (...) {
-    restore();
-    throw;
-  }
-}
-
-mlx_import_stream_guard_::~mlx_import_stream_guard_() {
-  restore();
-}
-
-void mlx_import_stream_guard_::restore() {
-  for (auto s : defaults_) {
-    mlx::core::set_default_stream(s);
-  }
-}
-
 int mlx_stream_tostring(mlx_string* str_, mlx_stream stream) {
   try {
     std::ostringstream os;
@@ -113,8 +114,8 @@ extern "C" mlx_stream mlx_stream_new_device(mlx_device dev) {
 }
 extern "C" mlx_stream mlx_stream_new_thread_unsafe(mlx_device dev) {
   try {
-    return mlx_stream_new_(
-        mlx::core::new_thread_unsafe_stream(mlx_device_get_(dev)));
+    return mlx_stream_new_(record_portable(
+        mlx::core::new_thread_unsafe_stream(mlx_device_get_(dev))));
   } catch (std::exception& e) {
     mlx_error(e.what());
     return mlx_stream_new_();
@@ -312,14 +313,38 @@ extern "C" int mlx_get_default_stream_global(mlx_stream* stream, mlx_device dev)
 extern "C" int mlx_set_default_stream_global(mlx_stream stream) {
   try {
     auto s = mlx_stream_get_(stream);
+    // A thread-confined stream fails at first use on every other thread.
+    // Reject it here, where the caller can see why.
+    if (!is_portable(s)) {
+      throw std::invalid_argument(
+          "[set_default_stream_global] stream is not thread-unsafe; "
+          "create it with mlx_stream_new_thread_unsafe");
+    }
     {
       std::lock_guard<std::mutex> lock(default_override_mutex());
       default_overrides().insert_or_assign(
           std::make_pair(static_cast<int>(s.device.type), s.device.index), s);
     }
+    // Threads without a default of their own, including threads that never
+    // enter the C API, fall back to this stream instead of creating one.
+    mlx::core::set_global_default_stream(s);
     // Keep the core-internal (thread-local) default in sync for code inside
     // MLX that consults default_stream() directly on this thread.
     mlx::core::set_default_stream(s);
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+
+extern "C" int mlx_clear_default_stream_global(void) {
+  try {
+    {
+      std::lock_guard<std::mutex> lock(default_override_mutex());
+      default_overrides().clear();
+    }
+    mlx::core::clear_global_default_streams();
   } catch (std::exception& e) {
     mlx_error(e.what());
     return 1;
