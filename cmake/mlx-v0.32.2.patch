@@ -4,6 +4,12 @@ Provenance, in file order:
   mlx/backend/cuda/{device,rope,worker}.*, mlx/backend/gpu/eval.h,
   mlx/event.h, mlx/random.cpp, tests/random_tests.cpp
       pre-existing carried event/stream patches
+  mlx/backend/cuda/device.cpp, Device::make_current
+      compare the thread's current CUcontext with the device's retained
+      primary context instead of caching the device ordinal per thread, so
+      a foreign cuCtxSetCurrent no longer leaves MLX running in the wrong
+      context. Cannot detect cuDevicePrimaryCtxReset (the handle survives).
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
   mlx/export.cpp
       import_function stream binding; resolve on the importing thread
       sha256 fd9f95624f70d091f0577a6fb512bab1c03cbe0687c33afb2e345b68ff527eaa
@@ -23,10 +29,63 @@ Provenance, in file order:
       Maintained fork patch, not upstream; re-check on each MLX pin bump
 
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
-index 472b3d99f..e7d8f2620 100644
+index 472b3d9..babe63e 100644
 --- a/mlx/backend/cuda/device.cpp
 +++ b/mlx/backend/cuda/device.cpp
-@@ -617,8 +617,10 @@ std::unordered_map<int, CommandEncoder>& get_command_encoders() {
+@@ -7,6 +7,7 @@
+ 
+ #include <fmt/format.h>
+ #include <nvtx3/nvtx3.hpp>
++#include <atomic>
+ #include <future>
+ #include <unordered_set>
+ 
+@@ -56,15 +57,37 @@ Device::Device(int device) : device_(device) {
+ 
+ Device::~Device() = default;
+ 
++namespace {
++
++// The primary context of each device, retained once and never released.
++CUcontext primary_context(int device) {
++  static auto* contexts = new std::vector<std::atomic<CUcontext>>(
++      gpu::device_count());
++  auto& slot = contexts->at(device);
++  CUcontext ctx = slot.load(std::memory_order_acquire);
++  if (ctx == nullptr) {
++    CUdevice dev;
++    CHECK_CUDA_ERROR(cuDeviceGet(&dev, device));
++    CHECK_CUDA_ERROR(cuDevicePrimaryCtxRetain(&ctx, dev));
++    CUcontext prev = nullptr;
++    if (!slot.compare_exchange_strong(prev, ctx, std::memory_order_acq_rel)) {
++      CHECK_CUDA_ERROR(cuDevicePrimaryCtxRelease(dev));
++      ctx = prev;
++    }
++  }
++  return ctx;
++}
++
++} // namespace
++
+ void Device::make_current() {
+-  // We need to set/get current CUDA device very frequently, cache it to reduce
+-  // actual calls of CUDA APIs. Use -1 as sentinel so the first call on each
+-  // new thread always calls cudaSetDevice (which establishes the CUDA primary
+-  // context). Without this, device 0 would never get set on a new thread.
+-  static thread_local int current = -1;
+-  if (current != device_) {
++  // Compare contexts, not device ordinals. A foreign cuCtxSetCurrent on this
++  // thread leaves the ordinal unchanged while the current context is no
++  // longer the one MLX's work belongs to.
++  CUcontext current = nullptr;
++  CHECK_CUDA_ERROR(cuCtxGetCurrent(&current));
++  if (current != primary_context(device_)) {
+     CHECK_CUDA_ERROR(cudaSetDevice(device_));
+-    current = device_;
+   }
+ }
+ 
+@@ -617,8 +640,10 @@ std::unordered_map<int, CommandEncoder>& get_command_encoders() {
  }
  
  std::unordered_map<int, CommandEncoder>& get_global_command_encoders() {

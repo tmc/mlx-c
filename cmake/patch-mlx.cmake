@@ -11,13 +11,14 @@ if(NOT status EQUAL 0 OR NOT revision STREQUAL "1f8e74e3f12f31365464a6867c6579f0
 endif()
 set(patch "${CMAKE_CURRENT_LIST_DIR}/mlx-v0.32.2.patch")
 file(SHA256 "${patch}" patch_hash)
-if(NOT patch_hash STREQUAL "208b7f5a34f54241e4a02c51d9337e2061326e024e4d2a830680e2373a400396")
+if(NOT patch_hash STREQUAL "9c5c1e111bb7c817705e70aa5f3d23b9b130751ef6fa8a07dd3a88e2f2981383")
   message(FATAL_ERROR "MLX patch checksum mismatch")
 endif()
-# The first eight files match core b76656e61d0a; mlx/export.cpp resolves
+# The first eight files match core b76656e61d0a, except that device.cpp also
+# checks the current CUDA context in make_current; mlx/export.cpp resolves
 # imported streams on the importing thread. The rest carry upstream #4431,
-# #4453 and #4420; the last three add an opt-in process-wide default stream and a way to
-# clear it.
+# #4453 and #4420; the last three add an opt-in process-wide default stream
+# and a way to clear it.
 # The patch header gives per-file provenance.
 set(paths
   mlx/backend/cuda/device.cpp
@@ -62,7 +63,7 @@ set(pristine
   93e08b1178009b07f9a2a4758c03c1bca9ee1886d7ef6b733cc23bd867268d2e
   3ad2d40d2dbf0e8a15d7eba5885ce67b1e35cbe5cc951d18a5579955e5cea770)
 set(patched
-  35705bc794d7cf49d1351771ee80ca7fa8c5083ca6b931eaf691616adf54d28e
+  037fd9ba2e38936e9334fa542a5612a2b78f1493bbb5e85dfdb1edd7afc9d575
   f3d7b0c4f2beafe8f84d1fa727271c0efc4fc4f3eb1035e498d8dd46a3b16c08
   253f932f0a3c20f6b690c0f36a015e2de22e030f63ce62baee9f24e5605b4179
   490b1d11914bca6506bf69fefa5f2369f5fc589ccf1ea82515333e90ccb9e27c

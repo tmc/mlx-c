@@ -80,6 +80,19 @@ if(MLX_BUILD_CPU)
   set_tests_properties(mlxc_fresh_thread_clear PROPERTIES TIMEOUT 60)
 endif()
 
+# make_current restores the primary context after a foreign cuCtxSetCurrent.
+if(MLX_BUILD_CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  add_executable(mlxc_test_cuda_context cuda_context.cpp)
+  target_link_libraries(mlxc_test_cuda_context PRIVATE mlxc CUDA::cuda_driver)
+  foreach(mode matmul ew)
+    add_test(NAME mlxc_cuda_context_${mode}
+             COMMAND mlxc_test_cuda_context ${mode})
+    set_tests_properties(mlxc_cuda_context_${mode} PROPERTIES TIMEOUT 60
+                         RESOURCE_LOCK gpu)
+  endforeach()
+endif()
+
 # Upstream 0.32.2 regressions (#4431 sdpa, #4453 array assignment, #4420 scan).
 # Each mode is red on the pristine pin and green with the matching fix. The
 # scan modes assert an unrelated canary allocation, because the defect is an
