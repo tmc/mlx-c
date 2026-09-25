@@ -43,3 +43,19 @@ if(MLX_BUILD_CPU)
   add_test(NAME mlxc_stream_thread_local_cpu COMMAND mlxc_test_stream_thread_local)
   set_tests_properties(mlxc_stream_thread_local_cpu PROPERTIES TIMEOUT 15)
 endif()
+
+# Imported graphs retain streams, so each mode exports and imports its own file.
+if(MLX_BUILD_CPU)
+  add_executable(mlxc_test_import_stream import_stream.cpp)
+  target_link_libraries(mlxc_test_import_stream PRIVATE mlxc mlx Threads::Threads)
+  set(import_stream_modes cpu)
+  if(MLX_BUILD_METAL OR MLX_BUILD_CUDA)
+    list(APPEND import_stream_modes gpu mixed)
+  endif()
+  foreach(mode ${import_stream_modes})
+    add_test(NAME mlxc_import_stream_${mode}
+             COMMAND mlxc_test_import_stream
+                     ${CMAKE_CURRENT_BINARY_DIR}/import_stream_${mode}.mlxfn ${mode})
+    set_tests_properties(mlxc_import_stream_${mode} PROPERTIES TIMEOUT 60)
+  endforeach()
+endif()

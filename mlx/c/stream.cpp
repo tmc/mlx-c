@@ -8,6 +8,7 @@
 #include "mlx/c/device.h"
 #include "mlx/c/error.h"
 #include "mlx/c/private/mlx.h"
+#include "mlx/c/private/import_stream.h"
 #include "mlx/c/stream.h"
 
 namespace {
@@ -55,6 +56,35 @@ mlx::core::Stream effective_default_stream(mlx::core::Device d) {
 }
 
 } // namespace
+
+mlx_import_stream_guard_::mlx_import_stream_guard_() {
+  using namespace mlx::core;
+  // Constants are loaded on CPU even when all serialized operations use GPU.
+  // device_count, unlike a backend-compiled predicate, checks visible devices.
+  for (auto type : {Device::cpu, Device::gpu}) {
+    for (int i = 0, n = device_count(type); i < n; ++i) {
+      defaults_.push_back(default_stream(Device(type, i)));
+    }
+  }
+  try {
+    for (auto s : defaults_) {
+      effective_default_stream(s.device);
+    }
+  } catch (...) {
+    restore();
+    throw;
+  }
+}
+
+mlx_import_stream_guard_::~mlx_import_stream_guard_() {
+  restore();
+}
+
+void mlx_import_stream_guard_::restore() {
+  for (auto s : defaults_) {
+    mlx::core::set_default_stream(s);
+  }
+}
 
 int mlx_stream_tostring(mlx_string* str_, mlx_stream stream) {
   try {
