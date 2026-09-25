@@ -45,6 +45,10 @@ Provenance, in file order:
       four-thread io pool with path loads, so a slow reader (a Go callback)
       stalled unrelated path loads. Still on upstream main 073d2252c.
       Maintained fork patch, not upstream; re-check on each MLX pin bump
+  mlx/backend/cuda/load.cpp, Load::eval_gpu
+      free the malloc'd staging buffer when the read throws; it leaked
+      once per failed lazy load. Still on upstream main 073d2252c.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
 
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
 index 472b3d9..babe63e 100644
@@ -955,5 +959,36 @@ index b53c92483..448171f53 100644
 +      : reader_pool();
 +  auto fut = pool.enqueue(std::move(read_task)).share();
    scheduler::enqueue(stream(), [fut = std::move(fut)]() { fut.get(); });
+ }
+ 
+diff --git a/mlx/backend/cuda/load.cpp b/mlx/backend/cuda/load.cpp
+index 2acc52fd1..87aaf5d9a 100644
+--- a/mlx/backend/cuda/load.cpp
++++ b/mlx/backend/cuda/load.cpp
+@@ -1,6 +1,7 @@
+ // Copyright © 2023 Apple Inc.
+ 
+ #include <algorithm>
++#include <memory>
+ #include <utility>
+ 
+ #include "mlx/backend/cuda/device.h"
+@@ -33,7 +34,9 @@ void Load::eval_gpu(const std::vector<array>& inputs, array& out) {
+   auto size = out.size();
+   auto nbytes = size * out.itemsize();
+   out.set_data(cu::malloc_async(nbytes, encoder));
+-  auto out_ptr = malloc(nbytes);
++  // Free the staging buffer if the read throws, until the stream owns it.
++  std::unique_ptr<void, void (*)(void*)> staging(malloc(nbytes), free);
++  auto out_ptr = staging.get();
+   reader_->read(static_cast<char*>(out_ptr), nbytes, offset_);
+   if (swap_endianness_) {
+     switch (out.itemsize()) {
+@@ -54,6 +57,7 @@ void Load::eval_gpu(const std::vector<array>& inputs, array& out) {
+       nbytes,
+       cudaMemcpyDefault,
+       encoder.stream()));
++  staging.release();
+   CHECK_CUDA_ERROR(cudaLaunchHostFunc(encoder.stream(), free, out_ptr));
  }
  

@@ -12,6 +12,9 @@
 #include <string>
 #include <thread>
 #include <vector>
+#ifdef __linux__
+#include <malloc.h>
+#endif
 using namespace mlx::core;
 
 int assignment() {
@@ -208,12 +211,44 @@ int reader_pool(const std::string& dir) {
   return ms<1000 ? 0 : 1;
 }
 
+// A lazy load on a CUDA stream whose read fails must not leak the host buffer
+// that Load::eval_gpu mallocs to stage the read.
+int load_leak(const std::string& path) {
+#ifdef __linux__
+  constexpr int n=1<<22; // 16 MiB of float32
+  std::vector<float> values(n,1.f);
+  save_safetensors(path,{{"x",array(values.data(),{n})}});
+  std::string bytes;
+  {
+    std::ifstream in(path,std::ios::binary);
+    bytes.assign(std::istreambuf_iterator<char>(in),{});
+  }
+  std::filesystem::remove(path);
+  auto gpu=default_stream(Device::gpu);
+  auto run=[&]{
+    auto x=load_safetensors(std::make_shared<FailingReader>(bytes),gpu).first.at("x");
+    try { eval(x); } catch(const std::exception&) {}
+  };
+  auto in_use=[]{ auto m=mallinfo2(); return m.uordblks+m.hblkhd; };
+  run();
+  auto before=in_use();
+  int runs=8;
+  for(int i=0;i<runs;++i) run();
+  double leaked=(double(in_use())-double(before))/(1<<20);
+  std::cout << "load_leak runs=" << runs << " heap_growth_mib=" << leaked << std::endl;
+  return leaked < 16 ? 0 : 1;
+#else
+  return 2;
+#endif
+}
+
 int main(int argc,char**argv) {
   if(argc<2) return 2;
   std::string mode=argv[1];
   if(mode=="short-read" && argc==3) return short_read(argv[2]);
   if(mode=="derived-error" && argc==3) return derived_error(argv[2]);
   if(mode=="reader-pool" && argc==3) return reader_pool(argv[2]);
+  if(mode=="load-leak" && argc==3) return load_leak(argv[2]);
   if(mode=="assignment") return assignment();
   if(mode=="attention") return attention();
   if(mode=="scan") return scan(false);

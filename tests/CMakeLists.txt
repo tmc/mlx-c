@@ -95,8 +95,9 @@ endif()
 
 # Upstream 0.32.2 regressions (#4431 sdpa, #4453 array assignment, #4420 scan),
 # plus fork fixes: short-read, for ParallelFileReader ignoring short preads,
-# derived-error, for a GPU eval that depends on a failed lazy load, and
-# reader-pool, for a path load stalled behind blocked custom-reader reads.
+# derived-error, for a GPU eval that depends on a failed lazy load,
+# reader-pool, for a path load stalled behind blocked custom-reader reads, and
+# load-leak, for the CUDA Load staging buffer leaked by a failed read.
 # Each mode is red on the pristine pin and green with the matching fix. The
 # scan modes assert an unrelated canary allocation, because the defect is an
 # out-of-bounds write whose own numerical output is correct.
@@ -128,5 +129,13 @@ if(MLX_BUILD_CPU)
     set_tests_properties(mlxc_regression_attention mlxc_regression_scan
                          mlxc_regression_scan-axis0 mlxc_regression_derived-error
                          PROPERTIES RESOURCE_LOCK gpu)
+  endif()
+  # Measured with glibc's mallinfo2.
+  if(MLX_BUILD_CUDA AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_test(NAME mlxc_regression_load-leak
+             COMMAND mlxc_test_regressions load-leak
+                     ${CMAKE_CURRENT_BINARY_DIR}/load_leak.safetensors)
+    set_tests_properties(mlxc_regression_load-leak PROPERTIES TIMEOUT 120
+                         RESOURCE_LOCK gpu)
   endif()
 endif()
