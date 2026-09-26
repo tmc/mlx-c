@@ -98,7 +98,8 @@ endif()
 # derived-error, for a GPU eval that depends on a failed lazy load,
 # reader-pool, for a path load stalled behind blocked custom-reader reads,
 # failed-load, for an array read after its lazy load failed, and load-leak,
-# for the CUDA Load staging buffer leaked by a failed read.
+# for the CUDA Load staging buffer leaked by a failed read, and save-order
+# and gguf-order, for save_safetensors and save_gguf writing in hash-map order.
 # Each mode is red on the pristine pin and green with the matching fix. The
 # scan modes assert an unrelated canary allocation, because the defect is an
 # out-of-bounds write whose own numerical output is correct.
@@ -114,6 +115,13 @@ if(MLX_BUILD_CPU)
   add_test(NAME mlxc_regression_reader-pool
            COMMAND mlxc_test_regressions reader-pool ${CMAKE_CURRENT_BINARY_DIR})
   set_tests_properties(mlxc_regression_reader-pool PROPERTIES TIMEOUT 60)
+  add_test(NAME mlxc_regression_save-order
+           COMMAND mlxc_test_regressions save-order
+                   ${CMAKE_CURRENT_BINARY_DIR}/save_order.safetensors)
+  set_tests_properties(mlxc_regression_save-order PROPERTIES TIMEOUT 60)
+  add_test(NAME mlxc_regression_gguf-order
+           COMMAND mlxc_test_regressions gguf-order ${CMAKE_CURRENT_BINARY_DIR})
+  set_tests_properties(mlxc_regression_gguf-order PROPERTIES TIMEOUT 60)
   add_test(NAME mlxc_regression_failed-load
            COMMAND mlxc_test_regressions failed-load
                    ${CMAKE_CURRENT_BINARY_DIR}/failed_load.safetensors)

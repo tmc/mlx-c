@@ -60,6 +60,13 @@ Provenance, in file order:
       free the malloc'd staging buffer when the read throws; it leaked
       once per failed lazy load. Still on upstream main 073d2252c.
       Maintained fork patch, not upstream; re-check on each MLX pin bump
+  mlx/io/safetensors.cpp, save_safetensors; mlx/io/gguf.cpp, save_gguf
+      write tensors (and gguf metadata) in key order instead of the hash
+      map's iteration order. The safetensors path overload copies the map
+      once more than the writer overload, which can change that order, so
+      the two gave different bytes for the same arrays; save_gguf's output
+      depended on the map the same way. Still on upstream main 073d2252c.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
 
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
 index 472b3d9..babe63e 100644
@@ -1176,3 +1183,111 @@ index 2acc52fd1..87aaf5d9a 100644
    CHECK_CUDA_ERROR(cudaLaunchHostFunc(encoder.stream(), free, out_ptr));
  }
  
+diff --git a/mlx/io/safetensors.cpp b/mlx/io/safetensors.cpp
+index 75c8a6d..c4ff026 100644
+--- a/mlx/io/safetensors.cpp
++++ b/mlx/io/safetensors.cpp
+@@ -1,6 +1,7 @@
+ // Copyright © 2023 Apple Inc.
+ 
+ #include <json.hpp>
++#include <algorithm>
+ #include <memory>
+ #include <sstream>
+ #include <stack>
+@@ -248,8 +249,20 @@ void save_safetensors(
+     eval(std::move(to_eval));
+   }
+ 
++  // Lay the data out in key order, the order the header is written in, so
++  // the same arrays give the same bytes whatever order the map iterates in.
++  std::vector<std::pair<const std::string, array>*> entries;
++  entries.reserve(a.size());
++  for (auto& p : a) {
++    entries.push_back(&p);
++  }
++  std::sort(entries.begin(), entries.end(), [](auto* x, auto* y) {
++    return x->first < y->first;
++  });
++
+   size_t offset = 0;
+-  for (auto& [key, arr] : a) {
++  for (auto* p : entries) {
++    auto& [key, arr] = *p;
+     json child;
+     child["dtype"] = dtype_to_safetensor_str(arr.dtype());
+     child["shape"] = arr.shape();
+@@ -262,7 +275,8 @@ void save_safetensors(
+   uint64_t header_len = header.length();
+   out_stream->write(reinterpret_cast<char*>(&header_len), 8);
+   out_stream->write(header.c_str(), header_len);
+-  for (auto& [key, arr] : a) {
++  for (auto* p : entries) {
++    auto& arr = p->second;
+     // An empty tensor contributes a zero length span and has no data pointer
+     // worth asking for.
+     if (arr.nbytes() > 0) {
+diff --git a/mlx/io/gguf.cpp b/mlx/io/gguf.cpp
+index 6c27c46..1599e6c 100644
+--- a/mlx/io/gguf.cpp
++++ b/mlx/io/gguf.cpp
+@@ -1,5 +1,6 @@
+ // Copyright © 2023-2024 Apple Inc.
+ 
++#include <algorithm>
+ #include <cstdint>
+ #include <cstring>
+ #include <fstream>
+@@ -401,6 +402,21 @@ void append_kv_array(
+   }
+ }
+ 
++// sorted_entries returns pointers to the entries of m in key order, so a
++// file written from a hash map does not depend on the map's iteration order.
++template <typename Map>
++std::vector<typename Map::value_type*> sorted_entries(Map& m) {
++  std::vector<typename Map::value_type*> entries;
++  entries.reserve(m.size());
++  for (auto& p : m) {
++    entries.push_back(&p);
++  }
++  std::sort(entries.begin(), entries.end(), [](auto* x, auto* y) {
++    return x->first < y->first;
++  });
++  return entries;
++}
++
+ void save_gguf(
+     std::string file,
+     std::unordered_map<std::string, array> array_map,
+@@ -423,7 +439,8 @@ void save_gguf(
+   };
+ 
+   // Save any meta data
+-  for (auto& [key, value] : metadata) {
++  for (auto* entry : sorted_entries(metadata)) {
++    auto& [key, value] = *entry;
+     if (auto pv = std::get_if<std::string>(&value); pv) {
+       const std::string& str = *pv;
+       size_t size = sizeof(gguf_string) + str.length();
+@@ -524,7 +541,9 @@ void save_gguf(
+   uint64_t tensor_offset = 0;
+ 
+   // First, append the tensor info
+-  for (auto& [key, arr] : array_map) {
++  auto tensors = sorted_entries(array_map);
++  for (auto* entry : tensors) {
++    auto& [key, arr] = *entry;
+     arr.eval();
+ 
+     // Try to make it row contiguous
+@@ -569,7 +588,8 @@ void save_gguf(
+   }
+ 
+   // Then, append the tensor weights
+-  for (const auto& [key, arr] : array_map) {
++  for (auto* entry : tensors) {
++    auto& arr = entry->second;
+     if (!gguf_append_tensor_data(
+             ctx.get(), (void*)arr.data<void>(), arr.nbytes())) {
+       throw std::runtime_error("[save_gguf] gguf_append_tensor_data failed");

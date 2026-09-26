@@ -4,6 +4,7 @@
 #include "mlx/memory.h"
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <future>
@@ -11,6 +12,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <thread>
 #include <vector>
 #ifdef __linux__
@@ -376,6 +378,94 @@ int load_leak(const std::string& path) {
 #endif
 }
 
+// An in-memory writer, for comparing the writer save with the path save.
+struct BytesWriter : io::Writer {
+  std::string bytes;
+  bool is_open() const override { return true; }
+  bool good() const override { return true; }
+  size_t tell() override { return bytes.size(); }
+  void seek(int64_t,std::ios_base::seekdir) override {}
+  void write(const char* data,size_t n) override { bytes.append(data,n); }
+  std::string label() const override { return "bytes writer"; }
+};
+
+// save_safetensors must lay the data out in key order, the order of its
+// sorted header, so both overloads and every run give the same bytes. Tensor
+// k<i> holds i, so the data section must read 0, 1, 2, ... in order.
+int save_order(const std::string& path) {
+  set_default_device(Device::cpu);
+  const int n=64, len=4;
+  std::unordered_map<std::string,array> arrays;
+  for (int i=0;i<n;++i) {
+    char key[8];
+    std::snprintf(key,sizeof key,"k%03d",i);
+    arrays.insert({key,full({len},static_cast<float>(i))});
+  }
+  save_safetensors(path,arrays);
+  std::ifstream in(path,std::ios::binary);
+  std::string file((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+  std::filesystem::remove(path);
+  auto w=std::make_shared<BytesWriter>();
+  save_safetensors(w,arrays);
+  int bad=0;
+  for (auto* bytes : {&file,&w->bytes}) {
+    uint64_t header_len=0;
+    std::memcpy(&header_len,bytes->data(),8);
+    auto* data=reinterpret_cast<const float*>(bytes->data()+8+header_len);
+    int misplaced=0;
+    for (int i=0;i<n;++i) misplaced+=data[i*len]!=static_cast<float>(i);
+    std::cout << "save_order " << (bytes==&file ? "path" : "writer")
+              << " misplaced=" << misplaced << "/" << n << std::endl;
+    bad+=misplaced>0;
+  }
+  bool same=file==w->bytes;
+  std::cout << "save_order path and writer bytes "
+            << (same ? "equal" : "differ") << std::endl;
+  return bad==0 && same ? 0 : 1;
+}
+
+// save_gguf must write metadata and tensors in key order. Two maps holding
+// the same entries with different bucket counts iterate in different orders,
+// and must still give the same file.
+int gguf_order(const std::string& dir) {
+  set_default_device(Device::cpu);
+  const int n=64;
+  std::unordered_map<std::string,array> a1, a2;
+  std::unordered_map<std::string,GGUFMetaData> m1, m2;
+  a2.reserve(4096);
+  m2.reserve(4096);
+  for (int i=0;i<n;++i) {
+    char key[16];
+    std::snprintf(key,sizeof key,"t%03d",i);
+    a1.insert({key,full({4},static_cast<float>(i))});
+    std::snprintf(key,sizeof key,"m%03d",i);
+    m1.insert({key,std::string(key)});
+  }
+  for (int i=n-1;i>=0;--i) {
+    char key[16];
+    std::snprintf(key,sizeof key,"t%03d",i);
+    a2.insert({key,full({4},static_cast<float>(i))});
+    std::snprintf(key,sizeof key,"m%03d",i);
+    m2.insert({key,std::string(key)});
+  }
+  if (a1.begin()->first==a2.begin()->first && m1.begin()->first==m2.begin()->first) {
+    std::cout << "gguf_order maps iterate alike; the test cannot tell" << std::endl;
+    return 1;
+  }
+  auto p1=dir+"/gguf_order_1.gguf", p2=dir+"/gguf_order_2.gguf";
+  save_gguf(p1,a1,m1);
+  save_gguf(p2,a2,m2);
+  auto slurp=[](const std::string& p) {
+    std::ifstream in(p,std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+  };
+  bool same=slurp(p1)==slurp(p2);
+  std::filesystem::remove(p1);
+  std::filesystem::remove(p2);
+  std::cout << "gguf_order files " << (same ? "equal" : "differ") << std::endl;
+  return same ? 0 : 1;
+}
+
 int main(int argc,char**argv) {
   if(argc<2) return 2;
   std::string mode=argv[1];
@@ -384,6 +474,8 @@ int main(int argc,char**argv) {
   if(mode=="reader-pool" && argc==3) return reader_pool(argv[2]);
   if(mode=="failed-load" && argc==3) return failed_load(argv[2]);
   if(mode=="load-leak" && argc==3) return load_leak(argv[2]);
+  if(mode=="save-order" && argc==3) return save_order(argv[2]);
+  if(mode=="gguf-order" && argc==3) return gguf_order(argv[2]);
   if(mode=="assignment") return assignment();
   if(mode=="attention") return attention();
   if(mode=="scan") return scan(false);
