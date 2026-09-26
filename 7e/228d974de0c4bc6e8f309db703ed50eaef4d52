@@ -1,0 +1,8 @@
+commit 7e228d974de0c4bc6e8f309db703ed50eaef4d52
+date 2026-09-26T12:20:15-07:00
+claude-code 2.1.280; model claude-opus-5-5[1m]; tty not a tty
+not a tty; pid 65314; ITERM_SESSION_ID=w5t2p4:7AF08D83-1946-41D0-A5D0-6851DFA9CD71
+session=2e8a918a-a74a-4ca5-aa9c-f8d28962a657
+session_url=https://claude.ai/code/session_015g78kgFPmKtBJ4WitAJk1W
+evidence: bisect/trace/proto ~/tmp/vjp-bisect-7AF08D83/{redgreen,trace,proto}.out; gate ~/tmp/mlxc-sigcommit.{status,ctest,red1,red2,green,pristine}.log; ABBA ~/tmp/sigcommit-abba/abba.txt
+requested-by: user (fold in commit-on-signal after investigation of mlx-go TestCustomVjpBasic Metal timeout)
