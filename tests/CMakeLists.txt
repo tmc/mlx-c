@@ -96,6 +96,8 @@ endif()
 # Upstream 0.32.2 regressions (#4431 sdpa, #4453 array assignment, #4420 scan),
 # plus fork fixes: short-read, for ParallelFileReader ignoring short preads,
 # derived-error, for a GPU eval that depends on a failed lazy load,
+# cross-stream-vjp, for a GPU command buffer that deadlocks with a CPU task
+# waiting on the host for one of its signals,
 # reader-pool, for a path load stalled behind blocked custom-reader reads,
 # failed-load, for an array read after its lazy load failed, and load-leak,
 # for the CUDA Load staging buffer leaked by a failed read, and save-order
@@ -138,9 +140,13 @@ if(MLX_BUILD_CPU)
              COMMAND mlxc_test_regressions derived-error
                      ${CMAKE_CURRENT_BINARY_DIR}/derived_error.safetensors)
     set_tests_properties(mlxc_regression_derived-error PROPERTIES TIMEOUT 120)
+    add_test(NAME mlxc_regression_cross-stream-vjp
+             COMMAND mlxc_test_regressions cross-stream-vjp)
+    set_tests_properties(mlxc_regression_cross-stream-vjp PROPERTIES TIMEOUT 60)
     # One GPU at a time: these are correctness canaries, not throughput tests.
     set_tests_properties(mlxc_regression_attention mlxc_regression_scan
                          mlxc_regression_scan-axis0 mlxc_regression_derived-error
+                         mlxc_regression_cross-stream-vjp
                          PROPERTIES RESOURCE_LOCK gpu)
   endif()
   # Measured with glibc's mallinfo2.

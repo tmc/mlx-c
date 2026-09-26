@@ -153,6 +153,33 @@ int derived_error(const std::string& path) {
   return silent==0 ? 0 : 1;
 }
 
+// cross_stream_vjp takes value_and_grad through a custom_vjp whose function
+// and vjp run on the CPU stream while the cotangent comes from the GPU. The
+// GPU command buffer signals an event the CPU task waits on and, later in the
+// same buffer, waits on that task; if the host wait needs the buffer to
+// complete, the two block each other until Metal times the buffer out.
+int cross_stream_vjp() {
+  auto cpu=default_stream(Device::cpu);
+  auto f=custom_vjp(
+      [cpu](const std::vector<array>& in) {
+        return std::vector<array>{multiply(in[0],in[0],cpu)};
+      },
+      [cpu](const std::vector<array>& primals,const std::vector<array>&,
+            const std::vector<array>&) {
+        return std::vector<array>{multiply(array(2.f),primals[0],cpu)};
+      });
+  auto [values,grads]=value_and_grad(f)(std::vector<array>{array(3.f)});
+  try {
+    eval(values[0],grads[0]);
+  } catch(const std::exception& e) {
+    std::cout << "cross_stream_vjp eval failed: " << e.what() << std::endl;
+    return 1;
+  }
+  auto v=values[0].item<float>(), g=grads[0].item<float>();
+  std::cout << "cross_stream_vjp value=" << v << " grad=" << g << std::endl;
+  return v==9.f && g==6.f ? 0 : 1;
+}
+
 // A reader whose offset reads block until a gate opens, or give up after a
 // timeout so a failing run still ends.
 struct GatedReader : io::Reader {
@@ -477,6 +504,7 @@ int main(int argc,char**argv) {
   if(mode=="save-order" && argc==3) return save_order(argv[2]);
   if(mode=="gguf-order" && argc==3) return gguf_order(argv[2]);
   if(mode=="assignment") return assignment();
+  if(mode=="cross-stream-vjp") return cross_stream_vjp();
   if(mode=="attention") return attention();
   if(mode=="scan") return scan(false);
   if(mode=="scan-axis0") return scan(true);

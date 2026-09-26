@@ -11,7 +11,7 @@ if(NOT status EQUAL 0 OR NOT revision STREQUAL "1f8e74e3f12f31365464a6867c6579f0
 endif()
 set(patch "${CMAKE_CURRENT_LIST_DIR}/mlx-v0.32.2.patch")
 file(SHA256 "${patch}" patch_hash)
-if(NOT patch_hash STREQUAL "e7d5248259c7f8256681bd6fd9e974d844cc000cdb6b4fd4a7d7d13e961e183c")
+if(NOT patch_hash STREQUAL "158a940129a4605cb8af4d83f7985315eed8ee0860a98d1cc68435f6934cabb4")
   message(FATAL_ERROR "MLX patch checksum mismatch")
 endif()
 # The first eight files match core b76656e61d0a, except that device.cpp also
@@ -109,7 +109,7 @@ set(patched
   6389a758ef907a3a5bc3bfea1dbffa7c711305bc95fd1f4cfbd3ca98433b56f7
   d07b768d44fbb31327020fcf11fd6a9f196b5b9d55edd3803fada198c764ad4f
   a0dd0ba9b095f2f6fb33da18abdd238ed18caeb040ba50a6dad24c00907c695f
-  9f8457f8a82639eb9c6105cfacde78e3dd349d88bdc1f7762dbbc737f07f0281
+  a48cd9d897b247da9d6676d04209cb19d28e0c0db440e74af53c5fccc2630b15
   41081425624cd1d2daea7c4d62109ebd9bcff893632ee4238faf9a31c4c0517f
   a1ccf789efbb9b17020ed09294c270fd27e61b6f64c310eff75ee5bb1eaf2575
   d8924605822eda3036c782fe4d337f5ffa9be9498264c9028bb1fb4d7a237d15

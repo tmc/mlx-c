@@ -38,6 +38,8 @@ Provenance, in file order:
       handler attaches the error inherited from a waited event after the
       signal. An eval that depended on a failed CPU task (a lazy load whose
       read threw) returned without an error about a quarter of the time.
+      A GPU signal commits its command buffer, so a wait encoded after it
+      cannot hold up the handler while a CPU task waits on the host for it.
       Still on upstream main 073d2252c.
       Maintained fork patch, not upstream; re-check on each MLX pin bump
   mlx/backend/common/load.cpp, Load::eval_cpu
@@ -944,7 +946,7 @@ index 2f25f894e..306d0c85b 100644
          }
        });
 diff --git a/mlx/backend/metal/event.cpp b/mlx/backend/metal/event.cpp
-index 38a387c9c..a921ad6ab 100644
+index 38a387c9c..7cfb2d6e3 100644
 --- a/mlx/backend/metal/event.cpp
 +++ b/mlx/backend/metal/event.cpp
 @@ -26,11 +26,26 @@ EventImpl::~EventImpl() {
@@ -975,7 +977,15 @@ index 38a387c9c..a921ad6ab 100644
  }
  
  } // namespace metal
-@@ -72,8 +87,7 @@ void Event::signal(Stream stream) {
+@@ -68,12 +83,15 @@ void Event::signal(Stream stream) {
+   } else {
+     auto& encoder = metal::get_command_encoder(stream);
+     encoder.signal_event(*this, value());
++    // Commit now. A host wait on this value waits for the buffer's
++    // completion handler, and a later wait in the same buffer can be on a CPU
++    // task that is itself blocked in that host wait.
++    encoder.commit();
+   }
  }
  
  bool Event::is_signaled() const {
