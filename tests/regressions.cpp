@@ -80,6 +80,32 @@ int scan(bool axis0) {
   return intact && numeric ? 0 : 1;
 }
 
+// A cumsum over a size-1 axis of a slice, [1,1,8] with strides [392,392,1],
+// must not write outside its output. Without the fix the strided kernel
+// scans with the parent's stride of 392 over an 8-element output and
+// overwrites whatever the allocator placed after it, here the sentinels.
+int scan_singleton() {
+  auto gpu=default_stream(Device::gpu);
+  std::vector<float> want{1,2,3,4,5,6,7,8};
+  int corrupt=0, wrong=0;
+  for (int iter=0;iter<50;++iter) {
+    std::vector<array> sentinels;
+    for (int i=0;i<128;++i) sentinels.push_back(array(want.data(),{8}));
+    eval(sentinels);
+    for (int i=1;i<128;i+=2) sentinels[i]=array(0.f);
+    auto big=ones({1,1,392},float32,gpu);
+    eval(big);
+    auto x=slice(big,{0,0,0},{1,1,8},gpu);
+    auto out=cumsum(x,-2,false,true,gpu);
+    eval(out);
+    wrong+=!array_equal(out,ones({1,1,8}),Device::cpu).item<bool>();
+    for (int i=0;i<128;i+=2)
+      corrupt+=std::memcmp(sentinels[i].data<float>(),want.data(),sizeof(float)*8)!=0;
+  }
+  std::cout << "scan_singleton corrupt_sentinels=" << corrupt << " wrong_outputs=" << wrong << std::endl;
+  return corrupt==0 && wrong==0 ? 0 : 1;
+}
+
 // A lazily loaded tensor whose file shrinks before eval must fail. Without the
 // fix a short pread is retried at the same offset, filling the rest of the
 // buffer with a repeat of the bytes already read.
@@ -508,5 +534,6 @@ int main(int argc,char**argv) {
   if(mode=="attention") return attention();
   if(mode=="scan") return scan(false);
   if(mode=="scan-axis0") return scan(true);
+  if(mode=="scan-singleton") return scan_singleton();
   return 2;
 }

@@ -99,9 +99,11 @@ endif()
 # cross-stream-vjp, for a GPU command buffer that deadlocks with a CPU task
 # waiting on the host for one of its signals,
 # reader-pool, for a path load stalled behind blocked custom-reader reads,
-# failed-load, for an array read after its lazy load failed, and load-leak,
-# for the CUDA Load staging buffer leaked by a failed read, and save-order
-# and gguf-order, for save_safetensors and save_gguf writing in hash-map order.
+# failed-load, for an array read after its lazy load failed, load-leak,
+# for the CUDA Load staging buffer leaked by a failed read, save-order and
+# gguf-order, for save_safetensors and save_gguf writing in hash-map order,
+# and scan-singleton, for a GPU scan over a size-1 axis of a slice writing
+# past the end of its output.
 # Each mode is red on the pristine pin and green with the matching fix. The
 # scan modes assert an unrelated canary allocation, because the defect is an
 # out-of-bounds write whose own numerical output is correct.
@@ -129,12 +131,13 @@ if(MLX_BUILD_CPU)
                    ${CMAKE_CURRENT_BINARY_DIR}/failed_load.safetensors)
   set_tests_properties(mlxc_regression_failed-load PROPERTIES TIMEOUT 60)
   if(MLX_BUILD_METAL OR MLX_BUILD_CUDA)
-    foreach(mode attention scan scan-axis0)
+    foreach(mode attention scan scan-axis0 scan-singleton)
       add_test(NAME mlxc_regression_${mode} COMMAND mlxc_test_regressions ${mode})
     endforeach()
     # The attention case allocates 2x4x8192x128 K and V twice over.
     set_tests_properties(mlxc_regression_attention PROPERTIES TIMEOUT 300)
     set_tests_properties(mlxc_regression_scan mlxc_regression_scan-axis0
+                         mlxc_regression_scan-singleton
                          PROPERTIES TIMEOUT 60)
     add_test(NAME mlxc_regression_derived-error
              COMMAND mlxc_test_regressions derived-error

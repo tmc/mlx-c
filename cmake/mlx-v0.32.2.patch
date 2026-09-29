@@ -69,6 +69,13 @@ Provenance, in file order:
       the two gave different bytes for the same arrays; save_gguf's output
       depended on the map the same way. Still on upstream main 073d2252c.
       Maintained fork patch, not upstream; re-check on each MLX pin bump
+  mlx/backend/cuda/scan.cu, mlx/backend/metal/scan.cpp, Scan::eval_gpu
+      copy an input whose scan axis has size 1 instead of scanning it in
+      place. Such an axis keeps the stride of the array it was sliced from
+      ([1,1,8] with strides [392,392,1]), and the strided kernel scanned
+      with that stride, writing past the end of an 8-element output into
+      unrelated live arrays. Still on upstream main 073d2252c.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
 
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
 index 472b3d9..babe63e 100644
@@ -1301,3 +1308,37 @@ index 6c27c46..1599e6c 100644
      if (!gguf_append_tensor_data(
              ctx.get(), (void*)arr.data<void>(), arr.nbytes())) {
        throw std::runtime_error("[save_gguf] gguf_append_tensor_data failed");
+diff --git a/mlx/backend/cuda/scan.cu b/mlx/backend/cuda/scan.cu
+index a7dd2eea2..04b00a457 100644
+--- a/mlx/backend/cuda/scan.cu
++++ b/mlx/backend/cuda/scan.cu
+@@ -458,7 +458,11 @@ void Scan::eval_gpu(const std::vector<array>& inputs, array& out) {
+   auto& s = stream();
+   auto& encoder = cu::get_command_encoder(s);
+ 
+-  if (in.flags().contiguous && in.strides()[axis_] != 0) {
++  // A size-1 axis keeps the stride of the array it was sliced from, which
++  // can exceed the data size; the strided kernel would scan with it and
++  // write past the end of the output, so copy such an input instead.
++  if (in.flags().contiguous && in.strides()[axis_] != 0 &&
++      in.shape(axis_) > 1) {
+     if (in.is_donatable() && in.itemsize() == out.itemsize()) {
+       out.copy_shared_buffer(in);
+     } else {
+diff --git a/mlx/backend/metal/scan.cpp b/mlx/backend/metal/scan.cpp
+index 18935191f..e82653a1e 100644
+--- a/mlx/backend/metal/scan.cpp
++++ b/mlx/backend/metal/scan.cpp
+@@ -117,7 +117,11 @@ void Scan::eval_gpu(const std::vector<array>& inputs, array& out) {
+   assert(inputs.size() == 1);
+ 
+   auto in = inputs[0];
+-  if (in.flags().contiguous && in.strides()[axis_] != 0) {
++  // A size-1 axis keeps the stride of the array it was sliced from, which
++  // can exceed the data size; the strided kernel would scan with it and
++  // write past the end of the output, so copy such an input instead.
++  if (in.flags().contiguous && in.strides()[axis_] != 0 &&
++      in.shape(axis_) > 1) {
+     if (in.is_donatable() && in.itemsize() == out.itemsize()) {
+       out.copy_shared_buffer(in);
+     } else {
