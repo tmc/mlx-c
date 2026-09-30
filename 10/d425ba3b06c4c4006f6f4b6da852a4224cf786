@@ -1,0 +1,7 @@
+commit=10d425ba3b06c4c4006f6f4b6da852a4224cf786
+date=2026-09-29T23:49:37-07:00
+claude-code=2.1.280 model=claude-opus-5-5[1m] tty=not a tty pid=428
+ITERM_SESSION_ID=w5t2p4:7AF08D83-1946-41D0-A5D0-6851DFA9CD71
+session=2e8a918a-a74a-4ca5-aa9c-f8d28962a657
+session_url=https://claude.ai/code/session_019N3Z12Fe72R7CUHUjKKEL3
+evidence: dgx:~/tmp/qmm-7AF08D83/{gate3.out,*-ninja.log}; ~/tmp/mlxc-qmm-7AF08D83/gate-mac.out; Go repro A/B ~/tmp/release-goal-7AF08D83/cuda-gen (release 6/12, patched 12/12)
