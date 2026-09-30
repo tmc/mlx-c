@@ -106,6 +106,74 @@ int scan_singleton() {
   return corrupt==0 && wrong==0 ? 0 : 1;
 }
 
+// A small 4-bit transformer (SmolLM-135M's shapes, random weights) must give
+// the same logits every time it is evaluated. Without the fix the sm80 CUDA
+// quantized matmul stages its output in shared memory that cp.async
+// prefetches may still be writing, and under CUDA graphs some evaluations
+// differ.
+int qmm_epilogue() {
+  auto gpu=default_stream(Device::gpu);
+  const int hidden=576, heads=9, kv_heads=3, head_dim=64, inter=1536;
+  const int vocab=49152, layers=30, tokens=14, reps=12;
+  uint64_t seed=0;
+  auto quant=[&](int out,int in) {
+    auto w=random::normal({out,in},bfloat16,0,0.05,random::key(++seed),gpu);
+    auto q=quantize(w,64,4,"affine",std::nullopt,gpu);
+    eval(q);
+    return q;
+  };
+  auto qmm=[&](const array& x,const std::vector<array>& q) {
+    return quantized_matmul(x,q[0],q[1],q[2],true,64,4,"affine",gpu);
+  };
+  auto norm_weight=[&] {
+    auto w=astype(random::normal({hidden},float32,1,0.1,random::key(++seed),gpu),bfloat16,gpu);
+    eval(w);
+    return w;
+  };
+  struct Layer { std::vector<array> q,k,v,o,gate,up,down; array n1,n2; };
+  std::vector<Layer> ls;
+  for (int i=0;i<layers;++i) {
+    auto q=quant(heads*head_dim,hidden), k=quant(kv_heads*head_dim,hidden);
+    auto v=quant(kv_heads*head_dim,hidden), o=quant(hidden,heads*head_dim);
+    auto gate=quant(inter,hidden), up=quant(inter,hidden), down=quant(hidden,inter);
+    auto n1=norm_weight(), n2=norm_weight();
+    ls.push_back({q,k,v,o,gate,up,down,n1,n2});
+  }
+  auto head=quant(vocab,hidden);
+  auto final_norm=norm_weight();
+  auto x0=random::normal({1,tokens,hidden},bfloat16,0,1,random::key(++seed),gpu);
+  eval(x0);
+  auto heads_first=[&](const array& x,int n) {
+    return transpose(reshape(x,{1,tokens,n,head_dim},gpu),{0,2,1,3},gpu);
+  };
+  std::vector<uint16_t> first;
+  int differ=0;
+  for (int r=0;r<reps;++r) {
+    auto h=x0;
+    for (auto& l : ls) {
+      auto x=fast::rms_norm(h,l.n1,1e-5,gpu);
+      auto q=heads_first(qmm(x,l.q),heads), k=heads_first(qmm(x,l.k),kv_heads);
+      auto v=heads_first(qmm(x,l.v),kv_heads);
+      q=fast::rope(q,head_dim,false,10000.f,1.f,0,std::nullopt,gpu);
+      k=fast::rope(k,head_dim,false,10000.f,1.f,0,std::nullopt,gpu);
+      auto o=fast::scaled_dot_product_attention(q,k,v,0.125,"causal",{},{},false,gpu);
+      o=reshape(transpose(o,{0,2,1,3},gpu),{1,tokens,heads*head_dim},gpu);
+      h=h+qmm(o,l.o);
+      x=fast::rms_norm(h,l.n2,1e-5,gpu);
+      auto g=qmm(x,l.gate);
+      h=h+qmm(g*sigmoid(g,gpu)*qmm(x,l.up),l.down);
+    }
+    auto logits=qmm(fast::rms_norm(h,final_norm,1e-5,gpu),head);
+    eval(logits);
+    auto p=logits.data<uint16_t>();
+    std::vector<uint16_t> got(p,p+logits.size());
+    if (r==0) first=got;
+    else differ+=got!=first;
+  }
+  std::cout << "qmm_epilogue differing_runs=" << differ << "/" << reps-1 << std::endl;
+  return differ==0 ? 0 : 1;
+}
+
 // A lazily loaded tensor whose file shrinks before eval must fail. Without the
 // fix a short pread is retried at the same offset, filling the rest of the
 // buffer with a repeat of the bytes already read.
@@ -535,5 +603,6 @@ int main(int argc,char**argv) {
   if(mode=="scan") return scan(false);
   if(mode=="scan-axis0") return scan(true);
   if(mode=="scan-singleton") return scan_singleton();
+  if(mode=="qmm-epilogue") return qmm_epilogue();
   return 2;
 }

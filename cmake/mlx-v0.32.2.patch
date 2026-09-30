@@ -76,6 +76,19 @@ Provenance, in file order:
       with that stride, writing past the end of an 8-element output into
       unrelated live arrays. Still on upstream main 073d2252c.
       Maintained fork patch, not upstream; re-check on each MLX pin bump
+  mlx/backend/cuda/device/qmm_sm80.cuh, qmm_sm80_mainloop
+      waits for the last cp.async prefetches before the epilogue. The
+      staged output tile sC shares shared memory with the sA/sB pipeline,
+      and a copy still in flight overwrote it, most often under CUDA graphs:
+      greedy decoding of a 4-bit model differed from Metal in 3 of 8 runs.
+      Still on upstream main a32f0c3d4.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
+  mlx/backend/cuda/jit_module.cpp, ptx_cache_dir
+      keys the default PTX cache directory by a hash of the embedded JIT
+      headers. It was keyed by the MLX version alone, so a build with the
+      qmm_sm80 fix above reused PTX compiled from the unfixed header.
+      Still on upstream main a32f0c3d4.
+      Maintained fork patch, not upstream; re-check on each MLX pin bump
 
 diff --git a/mlx/backend/cuda/device.cpp b/mlx/backend/cuda/device.cpp
 index 472b3d9..babe63e 100644
@@ -1342,3 +1355,70 @@ index 18935191f..e82653a1e 100644
      if (in.is_donatable() && in.itemsize() == out.itemsize()) {
        out.copy_shared_buffer(in);
      } else {
+diff --git a/mlx/backend/cuda/device/qmm_sm80.cuh b/mlx/backend/cuda/device/qmm_sm80.cuh
+index e6efe0402..2f39c3a61 100644
+--- a/mlx/backend/cuda/device/qmm_sm80.cuh
++++ b/mlx/backend/cuda/device/qmm_sm80.cuh
+@@ -262,6 +262,11 @@ CUTE_DEVICE void qmm_sm80_mainloop(
+     }
+   }
+ 
++  // Drain the cp.async prefetches still in flight: sC aliases the sA/sB
++  // pipeline buffers, so a late copy would overwrite the staged output.
++  cp_async_wait<0>();
++  __syncthreads();
++
+   // Epilogue.
+   CUTE_UNROLL
+   for (int i = 0; i < size(tCrC_accu); i++) {
+diff --git a/mlx/backend/cuda/jit_module.cpp b/mlx/backend/cuda/jit_module.cpp
+index 0d107a8e1..55f6b3028 100644
+--- a/mlx/backend/cuda/jit_module.cpp
++++ b/mlx/backend/cuda/jit_module.cpp
+@@ -108,6 +108,8 @@ const std::vector<std::string>& include_path_args() {
+   return cached_args;
+ }
+ 
++std::string jit_headers_hash();
++
+ // Get the cache directory for storing compiled results.
+ const std::filesystem::path& ptx_cache_dir() {
+   static std::filesystem::path cache = []() -> std::filesystem::path {
+@@ -115,8 +117,10 @@ const std::filesystem::path& ptx_cache_dir() {
+     if (auto c = std::getenv("MLX_PTX_CACHE_DIR"); c) {
+       cache = c;
+     } else {
+-      cache =
+-          std::filesystem::temp_directory_path() / "mlx" / version() / "ptx";
++      // PTX compiled from other JIT headers at the same version is stale,
++      // so key the default directory by the headers too.
++      cache = std::filesystem::temp_directory_path() / "mlx" / version() /
++          "ptx" / jit_headers_hash();
+     }
+ 
+ #if defined(_WIN32)
+@@ -302,6 +306,24 @@ constexpr const char* g_headers[] = {
+     jit_source_utils,
+ };
+ 
++// Return a hash of the embedded JIT header names and contents.
++std::string jit_headers_hash() {
++  uint64_t h = 14695981039346656037ull; // FNV-1a
++  auto add = [&h](const char* s) {
++    // Hash the terminating NUL too, so that strings cannot run together.
++    do {
++      h = (h ^ static_cast<unsigned char>(*s)) * 1099511628211ull;
++    } while (*s++);
++  };
++  for (auto name : g_include_names) {
++    add(name);
++  }
++  for (auto header : g_headers) {
++    add(header);
++  }
++  return fmt::format("{:016x}", h);
++}
++
+ void compile(
+     Device& device,
+     const std::string& module_name,

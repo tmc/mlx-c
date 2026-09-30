@@ -102,8 +102,9 @@ endif()
 # failed-load, for an array read after its lazy load failed, load-leak,
 # for the CUDA Load staging buffer leaked by a failed read, save-order and
 # gguf-order, for save_safetensors and save_gguf writing in hash-map order,
-# and scan-singleton, for a GPU scan over a size-1 axis of a slice writing
-# past the end of its output.
+# scan-singleton, for a GPU scan over a size-1 axis of a slice writing
+# past the end of its output, and qmm-epilogue, for the sm80 CUDA quantized
+# matmul racing its own prefetches.
 # Each mode is red on the pristine pin and green with the matching fix. The
 # scan modes assert an unrelated canary allocation, because the defect is an
 # out-of-bounds write whose own numerical output is correct.
@@ -146,10 +147,32 @@ if(MLX_BUILD_CPU)
     add_test(NAME mlxc_regression_cross-stream-vjp
              COMMAND mlxc_test_regressions cross-stream-vjp)
     set_tests_properties(mlxc_regression_cross-stream-vjp PROPERTIES TIMEOUT 60)
+    add_test(NAME mlxc_regression_qmm-epilogue
+             COMMAND mlxc_test_regressions qmm-epilogue)
+    set_tests_properties(mlxc_regression_qmm-epilogue PROPERTIES TIMEOUT 120)
+    if(MLX_BUILD_CUDA)
+      # The CUDA JIT looks for the CUTLASS and CCCL headers in include/
+      # beside the directory holding libmlx, where an install puts them.
+      # Link them into the same place for the build-tree libmlx.
+      FetchContent_GetProperties(cutlass)
+      FetchContent_GetProperties(cccl)
+      get_target_property(mlx_binary_dir mlx BINARY_DIR)
+      get_filename_component(jit_include "${mlx_binary_dir}/../include" ABSOLUTE)
+      file(MAKE_DIRECTORY "${jit_include}/cccl")
+      foreach(dir cute cutlass)
+        file(CREATE_LINK "${cutlass_SOURCE_DIR}/include/${dir}"
+             "${jit_include}/${dir}" SYMBOLIC)
+      endforeach()
+      foreach(dir cuda nv)
+        file(CREATE_LINK "${cccl_SOURCE_DIR}/include/${dir}"
+             "${jit_include}/cccl/${dir}" SYMBOLIC)
+      endforeach()
+    endif()
     # One GPU at a time: these are correctness canaries, not throughput tests.
     set_tests_properties(mlxc_regression_attention mlxc_regression_scan
                          mlxc_regression_scan-axis0 mlxc_regression_derived-error
                          mlxc_regression_cross-stream-vjp
+                         mlxc_regression_qmm-epilogue
                          PROPERTIES RESOURCE_LOCK gpu)
   endif()
   # Measured with glibc's mallinfo2.

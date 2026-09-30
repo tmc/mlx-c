@@ -11,7 +11,7 @@ if(NOT status EQUAL 0 OR NOT revision STREQUAL "1f8e74e3f12f31365464a6867c6579f0
 endif()
 set(patch "${CMAKE_CURRENT_LIST_DIR}/mlx-v0.32.2.patch")
 file(SHA256 "${patch}" patch_hash)
-if(NOT patch_hash STREQUAL "c0fab64a725c7204f2e6770f8533f62cdfb10e5241eb7126d6471ce57dcf414c")
+if(NOT patch_hash STREQUAL "3fe916faefca83b1ca628ab34a3edf131bda16c44cc7ab986bf2b9b918c3e28a")
   message(FATAL_ERROR "MLX patch checksum mismatch")
 endif()
 # The first eight files match core b76656e61d0a, except that device.cpp also
@@ -25,7 +25,10 @@ endif()
 # array whose evaluation failed raise the error from then on;
 # mlx/backend/cuda/load.cpp frees its staging buffer when a read fails;
 # mlx/io/safetensors.cpp and mlx/io/gguf.cpp write tensors in key order;
-# the scan files copy an input whose scan axis has size 1.
+# the scan files copy an input whose scan axis has size 1;
+# mlx/backend/cuda/device/qmm_sm80.cuh drains its prefetches before the
+# epilogue, and mlx/backend/cuda/jit_module.cpp keys the PTX cache by the
+# JIT headers.
 # The patch header gives per-file provenance.
 set(paths
   mlx/backend/cuda/device.cpp
@@ -58,7 +61,9 @@ set(paths
   mlx/io/safetensors.cpp
   mlx/io/gguf.cpp
   mlx/backend/cuda/scan.cu
-  mlx/backend/metal/scan.cpp)
+  mlx/backend/metal/scan.cpp
+  mlx/backend/cuda/device/qmm_sm80.cuh
+  mlx/backend/cuda/jit_module.cpp)
 set(pristine
   6a5033019724d0c8e5282744f2e7f22427e9e6aa7a824f1b32d85f87c804594b
   79cb9ec596574b06aaec6e804dde9b4ef661b72522adc712545424ffbf894879
@@ -90,7 +95,9 @@ set(pristine
   605401223a2ae9eb026d5f609b3f1087b809ccf5449eddc85f18be8a4aa7f63a
   94113017135c668c5df34dbb6fd405d9ceb7954fd1ee88e4b391ccbfc0c35f93
   7ecbfee566bcec8737cc0364960aab90c8d421ebb499b430641091d12a9a987a
-  0c8692994838698fc400990978e0d8998660034105352ae439833ad704633c6e)
+  0c8692994838698fc400990978e0d8998660034105352ae439833ad704633c6e
+  6e23076cd9427d503b334bbd1479628070e211fc77cf6ff33e5a2cd3b4f9b3bc
+  8f2ebbcc22d48e4bc403268e66d2c826889b63063157f08f7b799879b1eab501)
 set(patched
   037fd9ba2e38936e9334fa542a5612a2b78f1493bbb5e85dfdb1edd7afc9d575
   f3d7b0c4f2beafe8f84d1fa727271c0efc4fc4f3eb1035e498d8dd46a3b16c08
@@ -122,7 +129,9 @@ set(patched
   ceb9972a2845c5b5a55dad964bc88d83115d0015a67b7f457ac21ce26f5a3fc8
   8cb384ab3165d2766932fb49c5f31206c6ef08b28aace2c2f691cd319d6c31da
   19aa1206de699a1adac9378671b7b81f7d13d63305ac22f3aee8401e7ed72e4b
-  c4a54e575bc5816d2af9a354c99425e29593e4987ad3247611d0ea8a8f3a9daa)
+  c4a54e575bc5816d2af9a354c99425e29593e4987ad3247611d0ea8a8f3a9daa
+  04f4161d74b06965b43385b24cc147e223c5d1bc3815049a20096642570edb8c
+  17b890460290b6777776e96ad840e5d1060149ad7e46ee4ee89af8c26f384904)
 # Only the checked patch may differ from the pinned tracked source.
 execute_process(COMMAND "${GIT_EXECUTABLE}" diff --cached --quiet
   WORKING_DIRECTORY "${MLX_SOURCE_DIR}" RESULT_VARIABLE status)
