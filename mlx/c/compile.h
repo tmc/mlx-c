@@ -52,6 +52,14 @@ int mlx_detail_compile(
 int mlx_detail_compile_cache(mlx_compile_cache* res);
 int mlx_detail_compile_clear_cache(const mlx_compile_cache cache);
 int mlx_detail_compile_erase(const mlx_compile_cache cache, uintptr_t fun_id);
+int mlx_detail_compile_with_mode(
+    mlx_closure* res,
+    const mlx_closure fun,
+    uintptr_t fun_id,
+    bool shapeless,
+    const uint64_t* constants,
+    size_t constants_num,
+    mlx_compile_mode mode);
 int mlx_disable_compile(void);
 int mlx_enable_compile(void);
 int mlx_set_compile_mode(mlx_compile_mode mode);

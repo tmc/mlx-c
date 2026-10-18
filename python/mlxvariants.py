@@ -146,6 +146,7 @@ def mlx_core_fast(name, defs):
 def mlx_core_detail(name, defs):
     if name not in [
         "compile",
+        "compile_with_mode",
         "compile_cache",
         "compile_clear_cache",
         "compile_erase",

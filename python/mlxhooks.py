@@ -543,3 +543,43 @@ extern "C" int mlx_compile_cache_free(mlx_compile_cache cache) {
         )
 
     return True
+
+
+def mlx_detail_compile_with_mode(f, implementation):
+    if not implementation:
+        return True
+    print(
+        """\
+extern "C" int mlx_detail_compile_with_mode(
+    mlx_closure* res,
+    const mlx_closure fun,
+    uintptr_t fun_id,
+    bool shapeless,
+    const uint64_t* constants,
+    size_t constants_num,
+    mlx_compile_mode mode) {
+  if (mode != MLX_COMPILE_MODE_DISABLED &&
+      mode != MLX_COMPILE_MODE_NO_SIMPLIFY &&
+      mode != MLX_COMPILE_MODE_NO_FUSE &&
+      mode != MLX_COMPILE_MODE_ENABLED) {
+    mlx_error("invalid compile mode");
+    return 1;
+  }
+  try {
+    mlx_closure_set_(
+        *res,
+        mlx::core::detail::compile_with_mode(
+            mlx_closure_get_(fun),
+            fun_id,
+            shapeless,
+            std::vector<uint64_t>(constants, constants + constants_num),
+            mlx_compile_mode_to_cpp(mode)));
+  } catch (std::exception& e) {
+    mlx_error(e.what());
+    return 1;
+  }
+  return 0;
+}
+"""
+    )
+    return False
